@@ -1,4 +1,4 @@
-# QuestMetrix --- Project Documentation & Study Notes
+# QuestMetrix --- Project Documentation & Study Notes (with OpenAI)
 **Date**: 11-08-2026
 
 ## 1. Project Identity
