@@ -1,0 +1,1538 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>QuestMetrix Telemetry Pipeline Explorer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
+        .chart-container { position: relative; min-height: 250px; max-height: 400px; margin-bottom: 1rem; }
+        .pipeline-node { transition: all 0.3s ease; }
+        .pipeline-node.active { transform: scale(1.05); box-shadow: 0 0 15px rgba(59, 130, 246, 0.5); }
+        .pipeline-node.success { border-color: #10B981; }
+        .pipeline-node.processing { border-color: #F59E0B; }
+        .tab-btn { transition: all 0.2s ease; }
+        .tab-btn.active { background-color: #3B82F6; color: white; border-color: #3B82F6; }
+        .event-item { transition: all 0.3s ease; animation: slideIn 0.3s ease; }
+        @keyframes slideIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        .metric-card { transition: all 0.3s ease; }
+        .metric-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        .hidden-panel { display: none; }
+        #toast { transition: all 0.4s ease; opacity: 0; transform: translateY(-20px); }
+        #toast.show { opacity: 1; transform: translateY(0); }
+        @media (max-width: 640px) { .grid-responsive { grid-template-columns: 1fr !important; } }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <nav class="bg-white shadow-lg sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
+                    <span class="text-white font-bold text-lg">Q</span>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold text-gray-800">QuestMetrix</h1>
+                    <p class="text-sm text-gray-500">Telemetry Pipeline Explorer</p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-2">
+                <span class="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-semibold">Milestone 1 Complete</span>
+                <a href="#" class="text-blue-600 hover:text-blue-800 text-sm font-medium mr-4">Last Updated: Aug 11, 2026</a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto px-4 py-6">
+        <!-- Hero Section -->
+        <section class="mb-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-6 text-white">
+            <h2 class="text-2xl md:text-3xl font-bold mb-3">Explore How Game Telemetry Flows</h2>
+            <p class="text-blue-100 mb-2">Watch your game events journey through the QuestMetrix pipeline — validate, store, and visualize player behavior in real-time.</p>
+            <p class="text-blue-200 text-sm">Interactive Simulation | Educational Tool | Sandbox Environment</p>
+        </section>
+
+        <!-- Tab Navigation -->
+        <section class="mb-6">
+            <div class="flex flex-wrap gap-2 border-b border-gray-300 pb-2" id="tabContainer">
+                <button class="tab-btn px-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 font-medium text-sm" data-tab="playground" id="tabPlaygroundBtn">🚀 Live Pipeline</button>
+                <button class="tab-btn px-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 font-medium text-sm" data-tab="simulation" id="tabSimulationBtn">🎮 Event Simulator</button>
+                <button class="tab-btn px-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 font-medium text-sm" data-tab="vision" id="tabVisionBtn">🔮 Architecture Vision</button>
+                <button class="tab-btn px-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 font-medium text-sm" data-tab="learn" id="tabLearnBtn">📚 Learn Pipeline</button>
+                <button class="tab-btn px-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 font-medium text-sm" data-tab="challenge" id="tabChallengeBtn">⚡ Challenge</button>
+            </div>
+        </section>
+
+        <!-- Tab 1: Playground -->
+        <section class="tab-panel" data-panel="playground">
+            <div class="bg-white rounded-xl shadow-md p-6">
+                <h3 class="text-xl font-bold mb-6" style="color:#2d3748;">Live Telemetry Pipeline Sandbox</h3>
+
+                <!-- Pipeline Flow Diagram -->
+                <div class="bg-gray-50 rounded-xl p-6 mb-6">
+                    <div class="flex flex-wrap items-center justify-center gap-2">
+                        <div class="pipeline-node bg-white border-2 border-gray-300 rounded-lg px-4 py-3 text-center min-w-[130px]" data-node="client">
+                            <div class="text-2xl mb-1">🎮</div>
+                            <div class="text-sm font-semibold text-gray-700">Client</div>
+                            <div class="text-xs text-gray-500">JSON Input</div>
+                        </div>
+                        <div class="text-2xl text-gray-400">→</div>
+                        <div class="pipeline-node bg-white border-2 border-gray-300 rounded-lg px-4 py-3 text-center min-w-[130px]" data-node="api">
+                            <div class="text-2xl mb-1">🚀</div>
+                            <div class="text-sm font-semibold text-gray-700">FastAPI</div>
+                            <div class="text-xs text-gray-500">REST API</div>
+                        </div>
+                        <div class="text-2xl text-gray-400">→</div>
+                        <div class="pipeline-node bg-white border-2 border-gray-300 rounded-lg px-4 py-3 text-center min-w-[130px]" data-node="validation">
+                            <div class="text-2xl mb-1">✅</div>
+                            <div class="text-sm font-semibold text-gray-700">Pydantic</div>
+                            <div class="text-xs text-gray-500">Validation</div>
+                        </div>
+                        <div class="text-2xl text-gray-400">→</div>
+                        <div class="pipeline-node bg-white border-2 border-gray-300 rounded-lg px-4 py-3 text-center min-w-[130px]" data-node="database">
+                            <div class="text-2xl mb-1">💾</div>
+                            <div class="text-sm font-semibold text-gray-700">PostgreSQL</div>
+                            <div class="text-xs text-gray-500">Events Table</div>
+                        </div>
+                        <div class="text-2xl text-gray-400">→</div>
+                        <div class="pipeline-node bg-white border-2 border-gray-300 rounded-lg px-4 py-3 text-center min-w-[130px]" data-node="analytics">
+                            <div class="text-2xl mb-1">📊</div>
+                            <div class="text-sm font-semibold text-gray-700">Analytics</div>
+                            <div class="text-xs text-gray-500">Visualization</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Controls -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-8">
+                    <div class="lg:col-span-1">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Event Type</label>
+                        <select id="eventTypeSelect" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="enemy_killed">⚔️ Enemy Killed</option>
+                            <option value="level_started">🚀 Level Started</option>
+                            <option value="level_completed">🏆 Level Completed</option>
+                            <option value="player_died">💀 Player Died</option>
+                            <option value="item_collected">💎 Item Collected</option>
+                            <option value="player_quit">🚪 Player Quit</option>
+                        </select>
+                    </div>
+                    <div class="lg:col-span-1">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Player ID</label>
+                        <select id="playerSelect" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="player_001">Player 001</option>
+                            <option value="player_002">Player 002</option>
+                            <option value="player_003">Player 003</option>
+                        </select>
+                    </div>
+                    <div class="lg:col-span-1">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Level</label>
+                        <input type="number" id="levelInput" value="1" min="1" max="10" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    </div>
+                </div>
+
+                <div class="flex flex-wrap gap-4 mb-8">
+                    <button id="sendEventBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold transition-all transform hover:scale-105">
+                        🚀 Send Event
+                    </button>
+                    <button id="autoSimBtn" class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-semibold transition-all hidden">
+                        ▶️ Auto Simulate
+                    </button>
+                    <button id="stopSimBtn" class="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-semibold transition-all hidden">
+                        ⏹️ Stop Simulation
+                    </button>
+                    <button id="clearEventsBtn" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-6 py-3 rounded-lg font-semibold transition-all">
+                        🗑️ Clear Events
+                    </button>
+                </div>
+
+                <!-- Metrics -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                    <div class="metric-card bg-blue-50 rounded-lg p-4">
+                        <div class="text-sm text-gray-600 font-medium mb-1">Total Events</div>
+                        <div class="text-3xl font-bold text-blue-600" id="totalEventsMetric">0</div>
+                    </div>
+                    <div class="metric-card bg-green-50 rounded-lg p-4">
+                        <div class="text-sm text-gray-600 font-medium mb-1">Unique Players</div>
+                        <div class="text-3xl font-bold text-green-600" id="uniquePlayersMetric">0</div>
+                    </div>
+                    <div class="metric-card bg-purple-50 rounded-lg p-4">
+                        <div class="text-sm text-gray-600 font-medium mb-1">Validated</div>
+                        <div class="text-3xl font-bold text-purple-600" id="validatedMetric">0</div>
+                    </div>
+                    <div class="metric-card bg-red-50 rounded-lg p-4">
+                        <div class="text-sm text-gray-600 font-medium mb-1">Rejected</div>
+                        <div class="text-3xl font-bold text-red-600" id="rejectedMetric">0</div>
+                    </div>
+                </div>
+
+                <!-- Charts -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="chart-container bg-white rounded-xl border border-gray-200 p-4">
+                        <h4 class="font-semibold text-gray-800 mb-3">Event Distribution</h4>
+                        <canvas id="eventChart"></canvas>
+                    </div>
+                    <div class="chart-container bg-white rounded-xl border border-gray-200 p-4">
+                        <h4 class="font-semibold text-gray-800 mb-3">Level Progression Heatmap</h4>
+                        <canvas id="levelChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Recent Events -->
+                <div class="mt-8">
+                    <h4 class="font-semibold text-gray-800 mb-3">Recent Events (Live Data)</h4>
+                    <div class="bg-gray-50 rounded-lg p-4" id="eventsContainer">
+                        <div class="text-center text-gray-400 py-8">No events yet. Send your first event to see it here!</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Tab 2: Simulation -->
+        <section class="tab-panel hidden-panel" data-panel="simulation">
+            <div class="bg-white rounded-xl shadow-md p-6">
+                <h3 class="text-xl font-bold mb-4" style="color:#2d3748;">What-If Scenario Simulator</h3>
+                <p class="text-gray-600 mb-6">Explore how different player behaviors affect the telemetry pipeline and what insights you can extract.</p>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <div class="lg:col-span-1">
+                        <h4 class="font-semibold mb-4">⚙️ Configure Player Behavior</h4>
+                        <div class="space-y-6">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Players Active</label>
+                                <input type="range" id="playersActiveSlider" min="1" max="20" value="5" class="w-full">
+                                <div class="flex justify-between text-sm text-gray-600"><span>1</span><span id="playersActiveValue">5</span><span>20</span></div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Event Frequency (events/sec)</label>
+                                <input type="range" id="eventFrequencySlider" min="1" max="10" value="3" class="w-full">
+                                <div class="flex justify-between text-sm text-gray-600"><span>1</span><span id="eventFrequencyValue">3</span><span>10</span></div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Level Progression Rate</label>
+                                <input type="range" id="levelProgressionSlider" min="1" max="10" value="3" class="w-full">
+                                <div class="flex justify-between text-sm text-gray-600"><span>Slow</span><span id="levelProgressionValue">3</span><span>Fast</span></div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Drop-off Rate</label>
+                                <input type="range" id="dropOffSlider" min="0" max="100" value="30" class="w-full">
+                                <div class="flex justify-between text-sm text-gray-600"><span>0%</span><span id="dropOffValue">30%</span><span>100%</span></div>
+                            </div>
+                            <div class="flex gap-4">
+                                <button id="simulateStartBtn" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-semibold flex-1">▶️ Simulate</button>
+                                <button id="simulateStopBtn" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-semibold flex-1 hidden">⏹️ Stop</button>
+                            </div>
+                            <button id="simulateResetBtn" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded-lg font-semibold w-full">🔄 Reset</button>
+                        </div>
+                    </div>
+                    <div class="lg:col-span-2">
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                            <div class="metric-card bg-blue-50 rounded-lg p-3">
+                                <div class="text-sm text-gray-600 font-medium">Events Processed</div>
+                                <div class="text-2xl font-bold text-blue-600" id="simEventsMetric">0</div>
+                            </div>
+                            <div class="metric-card bg-green-50 rounded-lg p-3">
+                                <div class="text-sm text-gray-600 font-medium">Players Active</div>
+                                <div class="text-2xl font-bold text-green-600" id="simPlayersActive">0</div>
+                            </div>
+                            <div class="metric-card bg-purple-50 rounded-lg p-3">
+                                <div class="text-sm text-gray-600 font-medium">Level Completions</div>
+                                <div class="text-2xl font-bold text-purple-600" id="simCompletions">0</div>
+                            </div>
+                            <div class="metric-card bg-red-50 rounded-lg p-3">
+                                <div class="text-sm text-gray-600 font-medium">Drop-offs</div>
+                                <div class="text-2xl font-bold text-red-600" id="simDropoffs">0</div>
+                            </div>
+                        </div>
+                        <div class="chart-container bg-gray-50 rounded-xl p-4">
+                            <h4 class="font-semibold text-gray-800 mb-3">Player Retention Simulation</h4>
+                            <canvas id="simRetentionChart"></canvas>
+                        </div>
+                        <div class="chart-container bg-gray-50 rounded-xl p-4 mt-6">
+                            <h4 class="font-semibold text-gray-800 mb-3">Session Metrics Visualization</h4>
+                            <canvas id="simSessionChart"></canvas>
+                        </div>
+                        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-6">
+                            <h5 class="font-semibold text-blue-800 mb-2">💡 Key Insight</h5>
+                            <p class="text-sm text-blue-700" id="simInsight">Run a simulation to see insights about player behavior and pipeline efficiency.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Tab 3: Vision -->
+        <section class="tab-panel hidden-panel" data-panel="vision">
+            <div class="bg-white rounded-xl shadow-md p-6">
+                <h3 class="text-xl font-bold mb-4" style="color:#2d3748;">📈 Journey to Scale: QuestMetrix Architecture Evolution</h3>
+                <p class="text-gray-600 mb-6">See how the pipeline transforms from Milestone 1 to the target distributed architecture.</p>
+
+                <!-- Architecture Evolution Diagram -->
+                <div class="space-y-8 mb-8">
+                    <div id="milestone1Diagram">
+                        <h5 class="font-semibold text-lg mb-3" style="color:#3182ce;">Milestone 1: Current Implementation</h5>
+                        <div class="flex flex-wrap items-center justify-center gap-2 bg-gray-50 rounded-xl p-6">
+                            <div class="bg-white border-2 border-blue-200 rounded-lg px-4 py-3 text-center">
+                                <span class="text-2xl">📝</span>
+                                <div class="text-sm font-semibold text-gray-700">Manual JSON</div>
+                            </div>
+                            <span class="text-2xl text-gray-400">→</span>
+                            <div class="bg-white border-2 border-blue-200 rounded-lg px-4 py-3 text-center">
+                                <span class="text-2xl">🚀</span>
+                                <div class="text-sm font-semibold text-gray-700">FastAPI</div>
+                                <div class="text-xs text-gray-500">POST /events</div>
+                            </div>
+                            <span class="text-2xl text-gray-400">→</span>
+                            <div class="bg-white border-2 border-blue-200 rounded-lg px-4 py-3 text-center">
+                                <span class="text-2xl">✅</span>
+                                <div class="text-sm font-semibold text-gray-700">Pydantic</div>
+                                <div class="text-xs text-gray-500">Validation</div>
+                            </div>
+                            <span class="text-2xl text-gray-400">→</span>
+                            <div class="bg-white border-2 border-blue-200 rounded-lg px-4 py-3 text-center">
+                                <span class="text-2xl">💾</span>
+                                <div class="text-sm font-semibold text-gray-700">PostgreSQL</div>
+                                <div class="text-xs text-gray-500">events table</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="milestone2Diagram">
+                        <h5 class="font-semibold text-lg mb-3" style="color:#38a169;">Target Architecture: The Full Journey</h5>
+                        <div class="flex flex-wrap items-start justify-center gap-2 bg-gray-50 rounded-xl p-6">
+                            <div class="bg-white border-2 border-green-200 rounded-lg px-4 py-3 text-center">
+                                <span class="text-2xl">🎮</span>
+                                <div class="text-sm font-semibold text-gray-700">Godot Game</div>
+                                <div class="text-xs text-gray-500">Player Actions</div>
+                            </div>
+                            <span class="text-2xl text-gray-400 mt-4">→</span>
+                            <div class="bg-white border-2 border-green-200 rounded-lg px-4 py-3 text-center">
+                                <span class="text-2xl">📊</span>
+                                <div class="text-sm font-semibold text-gray-700">SDK</div>
+                                <div class="text-xs text-gray-500">track("event")</div>
+                            </div>
+                            <span class="text-2xl text-gray-400 mt-4">→</span>
+                            <div class="bg-white border-2 border-green-200 rounded-lg px-4 py-3 text-center">
+                                <span class="text-2xl">🚀</span>
+                                <div class="text-sm font-semibold text-gray-700">Event API</div>
+                                <div class="text-xs text-gray-500">HTTP + Auth</div>
+                            </div>
+                            <span class="text-2xl text-gray-400 mt-4">→</span>
+                            <div class="bg-white border-2 border-green-200 rounded-lg px-4 py-3 text-center">
+                                <span class="text-2xl">📬</span>
+                                <div class="text-sm font-semibold text-gray-700">Message Queue</div>
+                                <div class="text-xs text-gray-500">Retries</div>
+                            </div>
+                            <span class="text-2xl text-gray-400 mt-4">→</span>
+                            <div class="bg-white border-2 border-green-200 rounded-lg px-4 py-3 text-center">
+                                <span class="text-2xl">⚙️</span>
+                                <div class="text-sm font-semibold text-gray-700">Workers</div>
+                                <div class="text-xs text-gray-500">Processing</div>
+                            </div>
+                            <span class="text-2xl text-gray-400 mt-4">→</span>
+                            <div class="bg-white border-2 border-green-200 rounded-lg px-4 py-3 text-center">
+                                <span class="text-2xl">💾</span>
+                                <div class="text-sm font-semibold text-gray-700">PostgreSQL</div>
+                                <div class="text-xs text-gray-500">+ Redis</div>
+                            </div>
+                            <span class="text-2xl text-gray-400 mt-4">→</span>
+                            <div class="bg-white border-2 border-green-200 rounded-lg px-4 py-3 text-center">
+                                <span class="text-2xl">⚡</span>
+                                <div class="text-sm font-semibold text-gray-700">Analytics API</div>
+                                <div class="text-xs text-gray-500">Insights</div>
+                            </div>
+                            <span class="text-2xl text-gray-400 mt-4">→</span>
+                            <div class="bg-white border-2 border-green-200 rounded-lg px-4 py-3 text-center">
+                                <span class="text-2xl">📊</span>
+                                <div class="text-sm font-semibold text-gray-700">Dashboard</div>
+                                <div class="text-xs text-gray-500">React UI</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Milestone Roadmap -->
+                <div class="grid grid-cols-1 lg:grid-cols-7 gap-4 mb-8" id="roadmapContainer"></div>
+
+                <!-- Technology Stack -->
+                <div class="overflow-x-auto">
+                    <table class="min-w-full text-sm">
+                        <thead>
+                            <tr class="bg-gray-100">
+                                <th class="px-4 py-3 text-left font-semibold">Component</th>
+                                <th class="px-4 py-3 text-left font-semibold">Technology</th>
+                                <th class="px-4 py-3 text-left font-semibold">Status</th>
+                                <th class="px-4 py-3 text-left font-semibold">Purpose</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td class="px-4 py-3 border-b">Language</td><td class="px-4 py-3 border-b">Python</td><td class="px-4 py-3 border-b"><span class="text-green-600">Implemented</span></td><td class="px-4 py-3 border-b">Backend logic</td></tr>
+                            <tr><td class="px-4 py-3 border-b">API Framework</td><td class="px-4 py-3 border-b">FastAPI</td><td class="px-4 py-3 border-b"><span class="text-green-600">Implemented</span></td><td class="px-4 py-3 border-b">REST endpoints</td></tr>
+                            <tr><td class="px-4 py-3 border-b">Validation</td><td class="px-4 py-3 border-b">Pydantic</td><td class="px-4 py-3 border-b"><span class="text-green-600">Implemented</span></td><td class="px-4 py-3 border-b">Event schema checks</td></tr>
+                            <tr><td class="px-4 py-3 border-b">Database</td><td class="px-4 py-3 border-b">PostgreSQL 18</td><td class="px-4 py-3 border-b"><span class="text-green-600">Implemented</span></td><td class="px-4 py-3 border-b">Persistent storage</td></tr>
+                            <tr><td class="px-4 py-3 border-b">Game SDK</td><td class="px-4 py-3 border-b">Godot/GDScript</td><td class="px-4 py-3 border-b"><span class="text-yellow-600">Planned</span></td><td class="px-4 py-3 border-b">Game integration</td></tr>
+                            <tr><td class="px-4 py-3 border-b">Dashboard</td><td class="px-4 py-3 border-b">React</td><td class="px-4 py-3 border-b"><span class="text-yellow-600">Planned</span></td><td class="px-4 py-3 border-b">Data visualization</td></tr>
+                            <tr><td class="px-4 py-3 border-b">Cache</td><td class="px-4 py-3 border-b">Redis</td><td class="px-4 py-3 border-b"><span class="text-yellow-600">Planned</span></td><td class="px-4 py-3 border-b">Fast access data</td></tr>
+                            <tr><td class="px-4 py-3 border-b">Message Queue</td><td class="px-4 py-3 border-b">RabbitMQ</td><td class="px-4 py-3 border-b"><span class="text-yellow-600">Planned</span></td><td class="px-4 py-3 border-b">Async processing</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="bg-purple-50 border border-purple-200 rounded-lg p-4 mt-6">
+                    <h5 class="font-semibold text-purple-800 mb-2">🧠 Architectural Principles</h5>
+                    <ul class="list-disc list-inside text-sm text-purple-700 space-y-1">
+                        <li>Build incrementally - each component is tested before adding the next</li>
+                        <li>Use PostgreSQL as the source of truth</li>
+                        <li>Add caching only when it solves a measurable performance problem</li>
+                        <li>Keep API contracts explicit and versioned</li>
+                        <li>Design for failure with retries, dead-letter queues, and alerts</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- Tab 4: Learn -->
+        <section class="tab-panel hidden-panel" data-panel="learn">
+            <div class="bg-white rounded-xl shadow-md p-6">
+                <h3 class="text-xl font-bold mb-4" style="color:#2d3748;">📚 Understanding the Telemetry Pipeline</h3>
+                <p class="text-gray-600 mb-6">A guided tour through the cause-and-effect flow of data in QuestMetrix.</p>
+
+                <!-- Event Schema -->
+                <div class="mb-8">
+                    <h4 class="font-semibold text-xl mb-4" style="color:#3182ce;">1. The Event Contract</h4>
+                    <p class="text-gray-600 mb-4">Every event flowing through QuestMetrix must match a strict schema. This is the contract between your game and the analytics platform.</p>
+                    <div class="bg-gray-900 rounded-xl p-6 mb-4">
+                        <pre class="text-sm text-green-400 overflow-x-auto"><code>{
+  "event": "enemy_killed",      // string - type of event
+  "player_id": "player_001",    // string - who did it?
+  "game_id": "demo_game",      // string - which game?
+  "timestamp": "2026-08-11T00:00:00Z", // string - when?
+  "level": 1                    // integer - where?
+}</code></pre>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full text-sm">
+                            <thead>
+                                <tr class="bg-gray-100">
+                                    <th class="px-4 py-3 text-left font-semibold">Field</th>
+                                    <th class="px-4 py-3 text-left font-semibold">Type</th>
+                                    <th class="px-4 py-3 text-left font-semibold">Required</th>
+                                    <th class="px-4 py-3 text-left font-semibold">Description</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr><td class="px-4 py-3 border-b">event</td><td class="px-4 py-3 border-b">string</td><td class="px-4 py-3 border-b">Yes</td><td class="px-4 py-3 border-b">Identifier for the event type</td></tr>
+                                <tr><td class="px-4 py-3 border-b">player_id</td><td class="px-4 py-3 border-b">string</td><td class="px-4 py-3 border-b">Yes</td><td class="px-4 py-3 border-b">Unique player identifier</td></tr>
+                                <tr><td class="px-4 py-3 border-b">game_id</td><td class="px-4 py-3 border-b">string</td><td class="px-4 py-3 border-b">Yes</td><td class="px-4 py-3 border-b">Game/project identifier</td></tr>
+                                <tr><td class="px-4 py-3 border-b">timestamp</td><td class="px-4 py-3 border-b">string</td><td class="px-4 py-3 border-b">Yes</td><td class="px-4 py-3 border-b">ISO 8601 format date-time</td></tr>
+                                <tr><td class="px-4 py-3 border-b">level</td><td class="px-4 py-3 border-b">integer</td><td class="px-4 py-3 border-b">Yes</td><td class="px-4 py-3 border-b">Game level for the event</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Event Registry -->
+                <div class="mb-8">
+                    <h4 class="font-semibold text-xl mb-4" style="color:#3182ce;">2. Event Registry</h4>
+                    <p class="text-gray-600 mb-4">QuestMetrix defines supported event types. Each type captures a specific player action with a purpose.</p>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full text-sm">
+                            <thead>
+                                <tr class="bg-gray-100">
+                                    <th class="px-4 py-3 text-left font-semibold">Event</th>
+                                    <th class="px-4 py-3 text-left font-semibold">Status</th>
+                                    <th class="px-4 py-3 text-left font-semibold">Purpose</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr><td class="px-4 py-3 border-b">enemy_killed</td><td class="px-4 py-3 border-b"><span class="text-green-600">Implemented ✓</span></td><td class="px-4 py-3 border-b">Records enemy defeat</td></tr>
+                                <tr><td class="px-4 py-3 border-b">level_started</td><td class="px-4 py-3 border-b"><span class="text-yellow-600">Planned</span></td><td class="px-4 py-3 border-b">Records level start</td></tr>
+                                <tr><td class="px-4 py-3 border-b">level_completed</td><td class="px-4 py-3 border-b"><span class="text-yellow-600">Planned</span></td><td class="px-4 py-3 border-b">Records level completion</td></tr>
+                                <tr><td class="px-4 py-3 border-b">player_died</td><td class="px-4 py-3 border-b"><span class="text-yellow-600">Planned</span></td><td class="px-4 py-3 border-b">Records player death</td></tr>
+                                <tr><td class="px-4 py-3 border-b">item_collected</td><td class="px-4 py-3 border-b"><span class="text-yellow-600">Planned</span></td><td class="px-4 py-3 border-b">Records item collection</td></tr>
+                                <tr><td class="px-4 py-3 border-b">player_quit</td><td class="px-4 py-3 border-b"><span class="text-yellow-600">Planned</span></td><td class="px-4 py-3 border-b">Records player leaving</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Validation Flow -->
+                <div class="mb-8">
+                    <h4 class="font-semibold text-xl mb-4" style="color:#3182ce;">3. The Validation Journey</h4>
+                    <div class="space-y-4">
+                        <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+                            <h5 class="font-semibold text-green-800 mb-2">✅ Valid Event</h5>
+                            <div class="text-sm text-green-700">HTTP 200 OK → Event stored to PostgreSQL</div>
+                            <div class="mt-2 text-xs text-green-600">Example: &#123;"event": "enemy_killed", "player_id": "player_001", "game_id": "demo_game", "timestamp": "2026-08-11", "level": 1&#125;</div>
+                        </div>
+                        <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+                            <h5 class="font-semibold text-red-800 mb-2">❌ Invalid Event</h5>
+                            <div class="text-sm text-red-700">HTTP 422 Unprocessable Entity → Event rejected</div>
+                            <div class="mt-2 text-xs text-red-600">Example: Missing "level" field → Pydantic validation error</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Data Pipeline -->
+                <div class="mb-8">
+                    <h4 class="font-semibold text-xl mb-4" style="color:#3182ce;">4. Data Flow Through the Pipeline</h4>
+                    <div class="flex flex-col md:flex-row items-center justify-center gap-2 bg-gray-50 rounded-xl p-4">
+                        <div class="bg-white border-2 border-blue-200 rounded-lg px-4 py-2 text-center text-sm font-semibold">Client</div>
+                        <span class="text-xl text-gray-400 md:rotate-0 rotate-90">→</span>
+                        <div class="bg-white border-2 border-blue-200 rounded-lg px-4 py-2 text-center text-sm font-semibold">FastAPI</div>
+                        <span class="text-xl text-gray-400 md:rotate-0 rotate-90">→</span>
+                        <div class="bg-white border-2 border-blue-200 rounded-lg px-4 py-2 text-center text-sm font-semibold">Pydantic</div>
+                        <span class="text-xl text-gray-400 md:rotate-0 rotate-90">→</span>
+                        <div class="bg-white border-2 border-blue-200 rounded-lg px-4 py-2 text-center text-sm font-semibold">PostgreSQL</div>
+                    </div>
+                </div>
+
+                <!-- Error Handling -->
+                <div class="mb-8">
+                    <h4 class="font-semibold text-xl mb-4" style="color:#3182ce;">5. What Happens When Things Go Wrong?</h4>
+                    <div class="space-y-3">
+                        <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                            <h5 class="font-semibold text-yellow-800 mb-2">Escalating Errors</h5>
+                            <div class="text-sm text-yellow-700 font-mono space-y-1">
+                                <div>Attempt 1 → fails → wait</div>
+                                <div>Attempt 2 → fails → wait longer</div>
+                                <div>Attempt 3 → fails → Dead Letter Queue</div>
+                            </div>
+                            <div class="text-xs text-yellow-600 mt-2">Retry with bounded backoff, never unlimited retries!</div>
+                        </div>
+                        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                            <h5 class="font-semibold text-blue-800 mb-2">HTTP Status Code Playbook</h5>
+                            <div class="text-sm text-blue-700 space-y-1">
+                                <div>400: Malformed request</div>
+                                <div>422: Schema validation failure</div>
+                                <div>429: Rate limit exceeded</div>
+                                <div>500: Unexpected server error</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Tab 5: Challenge -->
+        <section class="tab-panel hidden-panel" data-panel="challenge">
+            <div class="bg-white rounded-xl shadow-md p-6">
+                <h3 class="text-xl font-bold mb-4" style="color:#2d3748;">⚡ Interactive Challenge: Build Understanding</h3>
+                <p class="text-gray-600 mb-6">Test your knowledge of the QuestMetrix pipeline by predicting outcomes!</p>
+
+                <!-- Quiz Interface -->
+                <div id="quizContainer" class="max-w-2xl mx-auto">
+                    <div class="bg-gray-50 rounded-xl p-6 mb-6">
+                        <h4 class="font-semibold mb-4" id="quizQuestion">Loading quiz...</h4>
+                        <div id="quizOptions" class="space-y-3"></div>
+                        <button id="quizSubmitBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-semibold mt-4">Submit Answer</button>
+                        <div id="quizResult" class="mt-4"></div>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <p class="text-sm text-gray-600">Question <span id="quizProgress">1</span>/<span id="quizTotal">5</span></p>
+                        <button id="quizNextBtn" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded-lg font-semibold hidden">Next Question</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Toast for feedback -->
+    <div id="toast" class="fixed top-4 right-4 bg-green-500 text-white px-4 py-3 rounded-lg shadow-lg z-50">
+        <span id="toastMessage">Action successful!</span>
+    </div>
+
+    <script>
+        // Global state management
+        const state = {
+            events: [],
+            currentEventId: 1,
+            autoSimRunning: false,
+            simRunning: false,
+            charts: {},
+            quizIndex: 0,
+            quizScore: 0
+        };
+
+        // Quiz questions
+        const quizQuestions = [
+            {
+                question: "Which HTTP status code does the current /events endpoint return on a valid POST?",
+                options: ["200 OK", "201 Created", "202 Accepted", "204 No Content"],
+                correct: 0,
+                explanation: "The current implementation does not explicitly set 201, so it returns 200 OK."
+            },
+            {
+                question: "What happens when a required field is missing from an event payload?",
+                options: ["Event is stored with null value", "HTTP 422 Unprocessable Entity", "Event is silently dropped", "HTTP 500 Internal Server Error"],
+                correct: 1,
+                explanation: "Pydantic validation fails and FastAPI returns 422 Unprocessable Entity."
+            },
+            {
+                question: "Which component is NOT yet implemented in Milestone 1?",
+                options: ["FastAPI backend", "PostgreSQL database", "Pydantic validation", "Message queue"],
+                correct: 3,
+                explanation: "Message queues are planned for Milestone 5, not implemented in Milestone 1."
+            },
+            {
+                question: "Why does QuestMetrix use parameterized SQL queries?",
+                options: ["Faster performance", "SQL injection prevention", "Cleaner code", "Database compatibility"],
+                correct: 1,
+                explanation: "Parameterized queries prevent SQL injection, a key security measure documented in the threat model."
+            },
+            {
+                question: "What is the recommended approach for performance optimization?",
+                options: ["Optimize based on assumptions", "Add more indexes proactively", "Measure, identify bottleneck, change one thing", "Disable logging"],
+                correct: 2,
+                explanation: "The TDD emphasizes measurement-driven optimization following the Measure → Identify → Change → Re-measure loop."
+            }
+        ];
+
+        // Toast notification function
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            const toastMessage = document.getElementById('toastMessage');
+            toastMessage.textContent = message;
+            toast.className = 'fixed top-4 right-4 px-4 py-3 rounded-lg shadow-lg z-50';
+            toast.className += type === 'success' ? ' bg-green-500 text-white' : ' bg-red-500 text-white';
+            toast.style.opacity = '1';
+            toast.style.transform = 'translateY(0)';
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(-20px)';
+            }, 3000);
+        }
+
+        // Tab switching logic
+        function initTabs() {
+            const buttons = document.querySelectorAll('.tab-btn');
+            const panels = document.querySelectorAll('.tab-panel');
+
+            // Remove initial default classes, set first tab active
+            buttons.forEach((btn, idx) => {
+                btn.addEventListener('click', () => {
+                    buttons.forEach(b => b.classList.remove('active', 'bg-blue-600', 'text-white', 'border-blue-600'));
+                    btn.classList.add('active', 'bg-blue-600', 'text-white', 'border-blue-600');
+                    panels.forEach(p => p.classList.add('hidden-panel'));
+                    const target = btn.dataset.tab;
+                    const panel = document.querySelector(`[data-panel="${target}"]`);
+                    if (panel) {
+                        panel.classList.remove('hidden-panel');
+                        // Re-render charts after tab switch
+                        setTimeout(() => {
+                            if (target === 'playground') {
+                                renderPlaygroundCharts();
+                            } else if (target === 'simulation') {
+                                renderSimulationCharts();
+                            }
+                        }, 100);
+                    }
+                });
+            });
+        }
+
+        // Event validation logic
+        function validateEvent(eventData) {
+            // Defensive validation
+            if (!eventData || typeof eventData !== 'object') {
+                console.error('Invalid event data type:', typeof eventData);
+                return { valid: false, error: 'Event data must be an object' };
+            }
+
+            const requiredFields = ['event', 'player_id', 'game_id', 'timestamp', 'level'];
+            for (const field of requiredFields) {
+                if (!eventData[field] && eventData[field] !== 0) {
+                    return { valid: false, error: `Missing required field: ${field}` };
+                }
+            }
+
+            // Type checks
+            if (typeof eventData.event !== 'string') {
+                return { valid: false, error: 'Field "event" must be a string' };
+            }
+            if (typeof eventData.player_id !== 'string') {
+                return { valid: false, error: 'Field "player_id" must be a string' };
+            }
+            if (typeof eventData.game_id !== 'string') {
+                return { valid: false, error: 'Field "game_id" must be a string' };
+            }
+            if (typeof eventData.timestamp !== 'string') {
+                return { valid: false, error: 'Field "timestamp" must be a string' };
+            }
+            if (typeof eventData.level !== 'number') {
+                return { valid: false, error: 'Field "level" must be an integer' };
+            }
+            if (!Number.isInteger(eventData.level)) {
+                return { valid: false, error: 'Field "level" must be an integer' };
+            }
+            if (eventData.level < 1) {
+                return { valid: false, error: 'Field "level" must be positive' };
+            }
+
+            return { valid: true };
+        }
+
+        // Create a new event
+        function createEvent(eventType, playerId, level) {
+            const timestamp = new Date().toISOString();
+            const eventData = {
+                event: eventType,
+                player_id: playerId,
+                game_id: 'demo_game',
+                timestamp: timestamp,
+                level: level
+            };
+            const validation = validateEvent(eventData);
+            if (!validation.valid) {
+                console.error('Event validation failed:', validation.error);
+                showToast(validation.error, 'error');
+                return null;
+            }
+            return eventData;
+        }
+
+        // Add event to simulation store
+        function storeEvent(eventData) {
+            try {
+                if (!eventData || typeof eventData !== 'object') {
+                    throw new Error('Invalid event data for storage');
+                }
+                const storedEvent = {
+                    ...eventData,
+                    id: state.currentEventId++,
+                    processingTime: Math.floor(Math.random() * 200) + 50
+                };
+                state.events.unshift(storedEvent);
+                console.log('Event stored:', storedEvent);
+                return storedEvent;
+            } catch (error) {
+                console.error('Failed to store event:', error);
+                showToast('Failed to store event', 'error');
+                return null;
+            }
+        }
+
+        // Pipeline animation
+        async function animatePipeline(storedEvent) {
+            const nodes = document.querySelectorAll('.pipeline-node');
+            const clearClasses = () => {
+                nodes.forEach(node => {
+                    node.classList.remove('active', 'success', 'processing');
+                });
+            };
+
+            try {
+                // Animate through nodes
+                for (const node of nodes) {
+                    clearClasses();
+                    node.classList.add('active', 'processing');
+                    await new Promise(resolve => setTimeout(resolve, 150));
+                }
+                // Success state
+                nodes.forEach(node => {
+                    node.classList.remove('processing');
+                    node.classList.add('success');
+                });
+                setTimeout(clearClasses, 500);
+                return true;
+            } catch (error) {
+                console.error('Pipeline animation error:', error);
+                return false;
+            }
+        }
+
+        // Render events in the container
+        function renderEvents() {
+            try {
+                const container = document.getElementById('eventsContainer');
+                if (!container) {
+                    console.error('Events container not found');
+                    return;
+                }
+                if (state.events.length === 0) {
+                    container.innerHTML = '<div class="text-center text-gray-400 py-8">No events yet. Send your first event to see it here!</div>';
+                    return;
+                }
+
+                const dateFormatter = new Intl.DateTimeFormat('en-US', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit',
+                    hour12: false
+                });
+
+                const eventsHTML = state.events.slice(0, 10).map(evt => {
+                    const timeStr = dateFormatter.format(new Date(evt.timestamp));
+                    const eventIcon = {
+                        'enemy_killed': '⚔️',
+                        'level_started': '🚀',
+                        'level_completed': '🏆',
+                        'player_died': '💀',
+                        'item_collected': '💎',
+                        'player_quit': '🚪'
+                    }[evt.event] || '📊';
+
+                    return `
+                        <div class="event-item bg-white p-3 rounded-lg shadow-sm mb-2 flex items-center justify-between">
+                            <div class="flex items-center space-x-3">
+                                <span class="text-xl">${eventIcon}</span>
+                                <div>
+                                    <div class="font-semibold text-sm text-gray-800">${evt.event}</div>
+                                    <div class="text-xs text-gray-500">Player: ${evt.player_id} | Level: ${evt.level}</div>
+                                </div>
+                            </div>
+                            <div class="text-right text-xs text-gray-500">
+                                <div>${timeStr}</div>
+                                <div class="text-green-600">✓ Stored (${evt.processingTime}ms)</div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                container.innerHTML = eventsHTML;
+            } catch (error) {
+                console.error('Error rendering events:', error);
+            }
+        }
+
+        // Send event handler
+        async function sendEventHandler() {
+            try {
+                // Get input values
+                const eventType = document.getElementById('eventTypeSelect').value;
+                const playerId = document.getElementById('playerSelect').value;
+                const levelInput = document.getElementById('levelInput');
+                const level = parseInt(levelInput.value, 10);
+
+                // Input validation
+                if (!eventType || !playerId) {
+                    showToast('Please select event type and player', 'error');
+                    return;
+                }
+                if (isNaN(level) || level < 1) {
+                    showToast('Please enter a valid level (1-10)', 'error');
+                    levelInput.value = 1;
+                    return;
+                }
+
+                // Create and validate event
+                const eventData = createEvent(eventType, playerId, level);
+                if (!eventData) {
+                    // Error already shown by createEvent
+                    console.error('Invalid event data');
+                    return;
+                }
+
+                // Store and animate
+                const storedEvent = storeEvent(eventData);
+                if (storedEvent) {
+                    await animatePipeline(storedEvent);
+                    renderEvents();
+                    updateMetrics();
+                    updateCharts();
+                    showToast('Event stored successfully!');
+                }
+            } catch (error) {
+                console.error('Error in sendEventHandler:', error);
+                showToast('An unexpected error occurred', 'error');
+            }
+        }
+
+        // Auto simulation
+        function startAutoSimulation() {
+            try {
+                if (state.autoSimRunning) return;
+                
+                // Show/hide buttons
+                document.getElementById('autoSimBtn').classList.add('hidden');
+                document.getElementById('stopSimBtn').classList.remove('hidden');
+                state.autoSimRunning = true;
+
+                const eventTypes = ['enemy_killed', 'level_started', 'level_completed', 'player_died', 'item_collected'];
+                const players = ['player_001', 'player_002', 'player_003'];
+
+                const interval = setInterval(async () => {
+                    if (!state.autoSimRunning) {
+                        clearInterval(interval);
+                        return;
+                    }
+                    try {
+                        const eventType = eventTypes[Math.floor(Math.random() * eventTypes.length)];
+                        const playerId = players[Math.floor(Math.random() * players.length)];
+                        const level = Math.floor(Math.random() * 5) + 1;
+                        const eventData = createEvent(eventType, playerId, level);
+                        if (eventData) {
+                            const storedEvent = storeEvent(eventData);
+                            if (storedEvent) {
+                                renderEvents();
+                                updateMetrics();
+                                updateCharts();
+                            }
+                        }
+                    } catch (error) {
+                        console.error('Error in auto-simulation interval:', error);
+                    }
+                }, 800);
+                
+                // Store the interval ID for cleanup
+                state.autoSimInterval = interval;
+                
+            } catch (error) {
+                console.error('Failed to start auto-simulation:', error);
+                showToast('Failed to start simulation', 'error');
+                state.autoSimRunning = false;
+                document.getElementById('autoSimBtn').classList.remove('hidden');
+                document.getElementById('stopSimBtn').classList.add('hidden');
+            }
+        }
+
+        function stopAutoSimulation() {
+            try {
+                state.autoSimRunning = false;
+                if (state.autoSimInterval) {
+                    clearInterval(state.autoSimInterval);
+                    state.autoSimInterval = null;
+                }
+                document.getElementById('autoSimBtn').classList.remove('hidden');
+                document.getElementById('stopSimBtn').classList.add('hidden');
+                showToast('Auto simulation stopped');
+            } catch (error) {
+                console.error('Failed to stop simulation:', error);
+            }
+        }
+
+        // Update metrics
+        function updateMetrics() {
+            try {
+                document.getElementById('totalEventsMetric').textContent = state.events.length;
+                const uniquePlayers = new Set(state.events.map(e => e.player_id)).size;
+                document.getElementById('uniquePlayersMetric').textContent = uniquePlayers;
+                document.getElementById('validatedMetric').textContent = state.events.length;
+                document.getElementById('rejectedMetric').textContent = '0';
+            } catch (error) {
+                console.error('Error updating metrics:', error);
+            }
+        }
+
+        // Simulate tab slider updates
+        function updateSimulationSliders() {
+            const players = document.getElementById('playersActiveSlider').value;
+            const frequency = document.getElementById('eventFrequencySlider').value;
+            const progression = document.getElementById('levelProgressionSlider').value;
+            const dropOff = document.getElementById('dropOffSlider').value;
+
+            document.getElementById('playersActiveValue').textContent = players;
+            document.getElementById('eventFrequencyValue').textContent = frequency;
+            document.getElementById('levelProgressionValue').textContent = progression;
+            document.getElementById('dropOffValue').textContent = dropOff + '%';
+        }
+
+        // Simulation engine
+        function startSimulation() {
+            try {
+                const players = parseInt(document.getElementById('playersActiveSlider').value, 10);
+                const frequency = parseInt(document.getElementById('eventFrequencySlider').value, 10);
+                const progression = parseInt(document.getElementById('levelProgressionSlider').value, 10);
+                const dropOff = parseInt(document.getElementById('dropOffSlider').value, 10);
+
+                // Validate ranges
+                if (players < 1 || players > 20 || frequency < 1 || frequency > 10 || progression < 1 || progression > 10 || dropOff < 0 || dropOff > 100) {
+                    showToast('Invalid simulation parameters', 'error');
+                    return;
+                }
+
+                document.getElementById('simulateStartBtn').classList.add('hidden');
+                document.getElementById('simulateStopBtn').classList.remove('hidden');
+                state.simRunning = true;
+
+                // Track simulation data
+                const simEvents = [];
+                let eventCount = 0;
+                let completions = 0;
+                let dropoffs = 0;
+                const retentionData = [players];
+                let activePlayers = players;
+
+                // Create initial players
+                const playersList = Array.from({length: players}, (_, i) => ({
+                    id: `sim_player_${i + 1}`,
+                    level: 1,
+                    active: true
+                }));
+
+                const interval = setInterval(() => {
+                    if (!state.simRunning) {
+                        clearInterval(interval);
+                        return;
+                    }
+
+                    try {
+                        // Generate events based on frequency
+                        for (let i = 0; i < frequency; i++) {
+                            const player = playersList[Math.floor(Math.random() * playersList.length)];
+                            if (!player) continue;
+
+                            if (!player.active) continue;
+
+                            const rand = Math.random() * 100;
+                            if (rand < dropOff) {
+                                player.active = false;
+                                dropoffs++;
+                                simEvents.push('player_quit');
+                                eventCount++;
+                                continue;
+                            }
+
+                            const eventTypes = ['enemy_killed', 'item_collected', 'player_died'];
+                            let eventType = eventTypes[Math.floor(Math.random() * eventTypes.length)];
+
+                            if (rand < progression * 5) {
+                                eventType = 'level_completed';
+                                completions++;
+                                player.level++;
+                            } else if (rand < progression * 10) {
+                                eventType = 'level_started';
+                            }
+
+                            const eventData = createEvent(eventType, player.id, player.level);
+                            if (eventData) {
+                                storeEvent(eventData);
+                                simEvents.push(eventType);
+                                eventCount++;
+                            }
+                        }
+
+                        // Update active players
+                        activePlayers = playersList.filter(p => p.active).length;
+                        retentionData.push(activePlayers);
+
+                        // Update display
+                        document.getElementById('simEventsMetric').textContent = eventCount;
+                        document.getElementById('simPlayersActive').textContent = activePlayers;
+                        document.getElementById('simCompletions').textContent = completions;
+                        document.getElementById('simDropoffs').textContent = dropoffs;
+
+                        // Update charts
+                        updateSimulationCharts(retentionData, simEvents, completions, dropoffs);
+
+                        // Update insight
+                        const dropOffRate = eventCount > 0 ? Math.round((dropoffs / eventCount) * 100) : 0;
+                        const completionRate = eventCount > 0 ? Math.round((completions / eventCount) * 100) : 0;
+                        document.getElementById('simInsight').textContent = 
+                            `With ${dropOff}% drop-off rate, ${dropOffRate}% of events led to player drop-off. Completion rate: ${completionRate}%. ` +
+                            `Consider redesigning level ${Math.ceil(activePlayers / (players || 1) * 5)} to improve retention.`;
+
+                    } catch (error) {
+                        console.error('Simulation tick error:', error);
+                    }
+                }, 500);
+
+                state.simInterval = interval;
+
+                // Clean up old events
+                state.events = [];
+                state.currentEventId = 1;
+
+            } catch (error) {
+                console.error('Failed to start simulation:', error);
+                stopSimulation();
+                showToast('Failed to start simulation', 'error');
+            }
+        }
+
+        function stopSimulation() {
+            try {
+                state.simRunning = false;
+                if (state.simInterval) {
+                    clearInterval(state.simInterval);
+                    state.simInterval = null;
+                }
+                document.getElementById('simulateStartBtn').classList.remove('hidden');
+                document.getElementById('simulateStopBtn').classList.add('hidden');
+                showToast('Simulation stopped');
+            } catch (error) {
+                console.error('Failed to stop simulation:', error);
+            }
+        }
+
+        function resetSimulation() {
+            try {
+                stopSimulation();
+                // Reset metrics
+                document.getElementById('simEventsMetric').textContent = '0';
+                document.getElementById('simPlayersActive').textContent = '0';
+                document.getElementById('simCompletions').textContent = '0';
+                document.getElementById('simDropoffs').textContent = '0';
+                document.getElementById('simInsight').textContent = 'Run a simulation to see insights about player behavior and pipeline efficiency.';
+                
+                // Reset charts
+                renderSimulationCharts();
+                
+                // Clear events from playground
+                state.events = [];
+                state.currentEventId = 1;
+                renderEvents();
+                updateMetrics();
+                if (state.charts.eventChart) {
+                    state.charts.eventChart.data.datasets[0].data = [0, 0, 0, 0, 0, 0];
+                    state.charts.eventChart.update();
+                }
+                if (state.charts.levelChart) {
+                    state.charts.levelChart.data.datasets[0].data = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+                    state.charts.levelChart.update();
+                }
+
+                showToast('Simulation reset');
+            } catch (error) {
+                console.error('Failed to reset simulation:', error);
+            }
+        }
+
+        // Chart initialization and updates
+        function initCharts() {
+            try {
+                initPlaygroundCharts();
+                initSimulationCharts();
+            } catch (error) {
+                console.error('Failed to initialize charts:', error);
+            }
+        }
+
+        function initPlaygroundCharts() {
+            try {
+                // Event distribution chart
+                const eventContext = document.getElementById('eventChart');
+                if (eventContext) {
+                    const eventLabels = ['enemy_killed', 'level_started', 'level_completed', 'player_died', 'item_collected', 'player_quit'];
+                    state.charts.eventChart = new Chart(eventContext, {
+                        type: 'doughnut',
+                        data: {
+                            labels: eventLabels,
+                            datasets: [{
+                                data: [0, 0, 0, 0, 0, 0],
+                                backgroundColor: ['#EF4444', '#3B82F6', '#10B981', '#8B5CF6', '#F59E0B', '#DC2626'],
+                                borderWidth: 2,
+                                borderColor: '#ffffff'
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    position: 'bottom',
+                                    labels: { font: { size: 11 }, padding: 15, boxWidth: 12 }
+                                }
+                            }
+                        }
+                    });
+                }
+
+                // Level progression chart
+                const levelContext = document.getElementById('levelChart');
+                if (levelContext) {
+                    const levelLabels = Array.from({length: 10}, (_, i) => `Level ${i + 1}`);
+                    state.charts.levelChart = new Chart(levelContext, {
+                        type: 'bar',
+                        data: {
+                            labels: levelLabels,
+                            datasets: [{
+                                label: 'Events per Level',
+                                data: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                                backgroundColor: 'rgba(59, 130, 246, 0.7)',
+                                borderColor: '#3B82F6',
+                                borderWidth: 1
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    ticks: { precision: 0 }
+                                }
+                            },
+                            plugins: {
+                                legend: { display: false }
+                            }
+                        }
+                    });
+                }
+
+                console.log('Playground charts initialized');
+            } catch (error) {
+                console.error('Error initializing playground charts:', error);
+            }
+        }
+
+        function updateCharts() {
+            try {
+                const eventChart = state.charts.eventChart;
+                const levelChart = state.charts.levelChart;
+
+                if (eventChart) {
+                    const eventCounts = {
+                        'enemy_killed': 0,
+                        'level_started': 0,
+                        'level_completed': 0,
+                        'player_died': 0,
+                        'item_collected': 0,
+                        'player_quit': 0
+                    };
+                    state.events.forEach(e => {
+                        if (eventCounts.hasOwnProperty(e.event)) {
+                            eventCounts[e.event]++;
+                        }
+                    });
+                    eventChart.data.datasets[0].data = Object.values(eventCounts);
+                    eventChart.update();
+                }
+
+                if (levelChart) {
+                    const levelData = new Array(10).fill(0);
+                    state.events.forEach(e => {
+                        if (typeof e.level === 'number' && e.level > 0 && e.level <= 10) {
+                            levelData[e.level - 1]++;
+                        }
+                    });
+                    levelChart.data.datasets[0].data = levelData;
+                    levelChart.update();
+                }
+            } catch (error) {
+                console.error('Error updating charts:', error);
+            }
+        }
+
+        function renderPlaygroundCharts() {
+            if (state.charts.eventChart && state.charts.levelChart) {
+                updateCharts();
+            }
+        }
+
+        function initSimulationCharts() {
+            try {
+                // Session chart
+                const retentionContext = document.getElementById('simRetentionChart');
+                if (retentionContext) {
+                    state.charts.retentionChart = new Chart(retentionContext, {
+                        type: 'line',
+                        data: {
+                            labels: ['Start'],
+                            datasets: [{
+                                label: 'Active Players',
+                                data: [5],
+                                borderColor: '#3B82F6',
+                                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                                fill: true,
+                                tension: 0.4
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    ticks: { precision: 0 }
+                                }
+                            },
+                            plugins: {
+                                legend: { display: false }
+                            }
+                        }
+                    });
+                }
+
+                // Session events chart
+                const sessionContext = document.getElementById('simSessionChart');
+                if (sessionContext) {
+                    state.charts.sessionChart = new Chart(sessionContext, {
+                        type: 'bar',
+                        data: {
+                            labels: ['enemy_killed', 'level_started', 'level_completed', 'player_died', 'item_collected', 'player_quit'],
+                            datasets: [{
+                                label: 'Event Distribution',
+                                data: [0, 0, 0, 0, 0, 0],
+                                backgroundColor: 'rgba(16, 185, 129, 0.7)',
+                                borderColor: '#10B981',
+                                borderWidth: 1
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    ticks: { precision: 0 }
+                                }
+                            },
+                            plugins: {
+                                legend: { display: false }
+                            }
+                        }
+                    });
+                }
+
+                console.log('Simulation charts initialized');
+            } catch (error) {
+                console.error('Error initializing simulation charts:', error);
+            }
+        }
+
+        function renderSimulationCharts() {
+            try {
+                if (state.charts.retentionChart) {
+                    state.charts.retentionChart.data.labels = ['Start'];
+                    state.charts.retentionChart.data.datasets[0].data = [5];
+                    state.charts.retentionChart.update();
+                }
+                if (state.charts.sessionChart) {
+                    state.charts.sessionChart.data.datasets[0].data = [0, 0, 0, 0, 0, 0];
+                    state.charts.sessionChart.update();
+                }
+            } catch (error) {
+                console.error('Error rendering simulation charts:', error);
+            }
+        }
+
+        function updateSimulationCharts(retentionData, events, completions, dropoffs) {
+            try {
+                if (state.charts.retentionChart) {
+                    state.charts.retentionChart.data.labels = Array.from({length: retentionData.length}, (_, i) => i === 0 ? 'Start' : `T+${i}`);
+                    state.charts.retentionChart.data.datasets[0].data = retentionData;
+                    state.charts.retentionChart.update();
+                }
+
+                if (state.charts.sessionChart) {
+                    const eventCounts = { 'enemy_killed': 0, 'level_started': 0, 'level_completed': 0, 'player_died': 0, 'item_collected': 0, 'player_quit': 0 };
+                    events.forEach(e => {
+                        if (eventCounts.hasOwnProperty(e)) {
+                            eventCounts[e]++;
+                        }
+                    });
+                    state.charts.sessionChart.data.datasets[0].data = Object.values(eventCounts);
+                    state.charts.sessionChart.update();
+                }
+            } catch (error) {
+                console.error('Error updating simulation charts:', error);
+            }
+        }
+
+        // Clear all events
+        function clearEvents() {
+            try {
+                state.events = [];
+                state.currentEventId = 1;
+                renderEvents();
+                updateMetrics();
+                if (state.charts.eventChart) {
+                    state.charts.eventChart.data.datasets[0].data = [0, 0, 0, 0, 0, 0];
+                    state.charts.eventChart.update();
+                }
+                if (state.charts.levelChart) {
+                    state.charts.levelChart.data.datasets[0].data = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+                    state.charts.levelChart.update();
+                }
+                showToast('All events cleared');
+            } catch (error) {
+                console.error('Error clearing events:', error);
+            }
+        }
+
+        // Quiz functions
+        function renderRoadmap() {
+            const roadmapData = [
+                { num: 1, name: 'Foundation', desc: 'FastAPI + PostgreSQL', status: 'complete' },
+                { num: 2, name: 'Game Integration', desc: 'Godot SDK', status: 'next' },
+                { num: 3, name: 'Analytics', desc: 'Statistics layer', status: 'planned' },
+                { num: 4, name: 'Dashboard', desc: 'React UI', status: 'planned' },
+                { num: 5, name: 'Scalability', desc: 'Queue + Redis', status: 'planned' },
+                { num: 6, name: 'Real-Time', desc: 'WebSockets', status: 'planned' },
+                { num: 7, name: 'Hardening', desc: 'Tests + Docker', status: 'planned' }
+            ];
+
+            const container = document.getElementById('roadmapContainer');
+            if (!container) return;
+
+            const html = roadmapData.map(step => {
+                const statusColor = step.status === 'complete' ? 'bg-green-100 text-green-700 border-green-200' : 
+                                   step.status === 'next' ? 'bg-blue-100 text-blue-700 border-blue-200' : 
+                                   'bg-gray-100 text-gray-600 border-gray-200';
+                const statusText = step.status === 'complete' ? '✓ Complete' : step.status === 'next' ? '➡ Next' : 'Planned';
+                return `
+                    <div class="bg-white border rounded-lg p-4 text-center ${statusColor}">
+                        <div class="text-2xl font-bold">${step.num}</div>
+                        <div class="font-semibold mt-1">${step.name}</div>
+                        <div class="text-xs mt-1">${step.desc}</div>
+                        <div class="text-xs font-semibold mt-2">${statusText}</div>
+                    </div>
+                `;
+            }).join('');
+
+            container.innerHTML = html;
+        }
+
+        function renderQuiz() {
+            try {
+                const q = quizQuestions[state.quizIndex];
+                if (!q) return;
+
+                document.getElementById('quizQuestion').textContent = q.question;
+                document.getElementById('quizProgress').textContent = state.quizIndex + 1;
+                document.getElementById('quizTotal').textContent = quizQuestions.length;
+
+                const optionsContainer = document.getElementById('quizOptions');
+                optionsContainer.innerHTML = q.options.map((opt, idx) => `
+                    <label class="flex items-center space-x-3 bg-white border border-gray-200 rounded-lg p-3 cursor-pointer hover:bg-gray-50">
+                        <input type="radio" name="quiz_option" value="${idx}" class="w-4 h-4">
+                        <span>${opt}</span>
+                    </label>
+                `).join('');
+
+                document.getElementById('quizResult').innerHTML = '';
+                document.getElementById('quizSubmitBtn').classList.remove('hidden');
+                document.getElementById('quizNextBtn').classList.add('hidden');
+            } catch (error) {
+                console.error('Error rendering quiz:', error);
+            }
+        }
+
+        function submitQuizAnswer() {
+            try {
+                const selected = document.querySelector('input[name="quiz_option"]:checked');
+                if (!selected) {
+                    showToast('Please select an answer!', 'error');
+                    return;
+                }
+                const answer = parseInt(selected.value, 10);
+                const q = quizQuestions[state.quizIndex];
+                const result = document.getElementById('quizResult');
+
+                if (answer === q.correct) {
+                    state.quizScore++;
+                    result.innerHTML = `<div class="bg-green-100 text-green-700 p-3 rounded-lg">Correct! ${q.explanation}</div>`;
+                } else {
+                    result.innerHTML = `<div class="bg-red-100 text-red-700 p-3 rounded-lg">Incorrect. Correct answer: ${q.options[q.correct]}. ${q.explanation}</div>`;
+                }
+
+                document.getElementById('quizSubmitBtn').classList.add('hidden');
+                const nextBtn = document.getElementById('quizNextBtn');
+                nextBtn.classList.remove('hidden');
+                if (state.quizIndex >= quizQuestions.length - 1) {
+                    nextBtn.textContent = 'See Results';
+                }
+            } catch (error) {
+                console.error('Error submitting quiz:', error);
+            }
+        }
+
+        function nextQuizQuestion() {
+            state.quizIndex++;
+            if (state.quizIndex >= quizQuestions.length) {
+                // Show final result
+                document.getElementById('quizContainer').innerHTML = `
+                    <div class="bg-gray-50 rounded-xl p-6 text-center">
+                        <h4 class="text-2xl font-bold mb-4">Quiz Complete!</h4>
+                        <p class="text-lg mb-4">Your score: <span class="font-bold ${state.quizScore > 3 ? 'text-green-600' : 'text-yellow-600'}">${state.quizScore}</span>/<span>${quizQuestions.length}</span></p>
+                        <p class="text-gray-600 mb-6">${state.quizScore === quizQuestions.length ? '🏆 Perfect! Excellent understanding of the QuestMetrix pipeline!' : state.quizScore >= 3 ? '👍 Good job! Review the Learn section for more details.' : '📚 Review the Learn tab and try again!'}</p>
+                        <button id="quizRestartBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-semibold">Restart Quiz</button>
+                    </div>
+                `;
+                document.getElementById('quizRestartBtn').addEventListener('click', () => {
+                    state.quizIndex = 0;
+                    state.quizScore = 0;
+                    renderQuiz();
+                });
+                return;
+            }
+            renderQuiz();
+        }
+
+        // Event listener initialization
+        function initEventListeners() {
+            try {
+                // Playground controls
+                document.getElementById('sendEventBtn').addEventListener('click', sendEventHandler);
+                document.getElementById('autoSimBtn').addEventListener('click', startAutoSimulation);
+                document.getElementById('stopSimBtn').addEventListener('click', stopAutoSimulation);
+                document.getElementById('clearEventsBtn').addEventListener('click', clearEvents);
+
+                // Simulation controls
+                document.getElementById('simulateStartBtn').addEventListener('click', startSimulation);
+                document.getElementById('simulateStopBtn').addEventListener('click', stopSimulation);
+                document.getElementById('simulateResetBtn').addEventListener('click', resetSimulation);
+
+                // Slider event listeners
+                ['playersActiveSlider', 'eventFrequencySlider', 'levelProgressionSlider', 'dropOffSlider'].forEach(id => {
+                    const slider = document.getElementById(id);
+                    if (slider) {
+                        slider.addEventListener('input', updateSimulationSliders);
+                    }
+                });
+
+                // Quiz controls
+                document.getElementById('quizSubmitBtn').addEventListener('click', submitQuizAnswer);
+                document.getElementById('quizNextBtn').addEventListener('click', nextQuizQuestion);
+
+                console.log('All event listeners attached');
+            } catch (error) {
+                console.error('Error attaching event listeners:', error);
+            }
+        }
+
+        // Main initialization
+        function init() {
+            try {
+                console.log('Initializing QuestMetrix Explorer...');
+                
+                // Set active tab
+                document.getElementById('tabPlaygroundBtn').classList.add('active', 'bg-blue-600', 'text-white', 'border-blue-600');
+                
+                // Initialize everything
+                initTabs();
+                initCharts();
+                initEventListeners();
+                renderRoadmap();
+                renderQuiz();
+                updateSimulationSliders();
+                renderEvents();
+                updateMetrics();
+                
+                console.log('QuestMetrix Explorer initialized successfully');
+            } catch (error) {
+                console.error('Initialization error:', error);
+                showToast('Failed to initialize the application', 'error');
+            }
+        }
+
+        // Start the application
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+<script>window.parent.postMessage({ action: "ready" }, "*"); 
+ 
+window.console = new Proxy(console, {
+  get(target, prop) {
+    if (['log', 'warn', 'error'].includes(prop)) {
+      return new Proxy(target[prop], {
+        apply(fn, thisArg, args) {
+          fn.apply(thisArg, args);
+          window.parent.postMessage({ action: 'console', 
+            type: prop, 
+            args: args.map((arg) => {
+              try {
+                return JSON.stringify(arg).replace(/^["']|["']$/g, '');
+              } catch (e) {
+                return arg;
+              }
+            }) 
+          }, '*');
+        }
+      });
+    }
+    return target[prop];
+  }
+});
+</script></body>
+</html>
