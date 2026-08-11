@@ -4,14 +4,15 @@ A chronological log of the project's development milestones.
 
 ### 11 August 2026
 
-- **TDD v0.2:** Added a new Technical Design Document (TDD) version 0.2 for Questmetrix.
-- **Documentation Improvement:** Created a TDD improvement file to facilitate future documentation enhancements.
+- **Completed Milestone 2 (Godot SDK Integration):** Successfully created and integrated the `QuestMetrix.gd` SDK. A test Godot game can now send events directly to the backend API, and the SDK includes error handling and documentation.
+- **Updated Testing Workflow:** The primary testing method has shifted from manual API calls to end-to-end testing from the Godot client, providing a more realistic verification of the event pipeline.
+- **Comprehensive Documentation Sync:** Revised the TDD, Roadmap, and README files to reflect the completion of Phase 2, update architecture diagrams, and remove outdated files and references.
 
   **Challenges:**
-  - None so far
+  - Ensuring all documentation was updated consistently to reflect the rapid progress.
 
   **Next Steps:**
-  - Begin Milestone 2: Godot SDK Integration to allow game events to be sent directly to the API.
+  - Prepare for Milestone 3: Analytics Layer.
 
 ### 10 August 2026
 
