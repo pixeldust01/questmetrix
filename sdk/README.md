@@ -31,6 +31,7 @@ From any GDScript:
 ```gdscript
 QuestMetrix.track("enemy_killed")
 ```
+
 Optional event data can be supplied:
 
 ```

@@ -41,11 +41,11 @@ Game -> QuestMetrix SDK -> Event API -> Message Queue -> Processing Engine -> Po
 
 The current system implements the initial backend pipeline:
 
-Client / API Request -> FastAPI -> PostgreSQL -> events table
+Godot SDK -> FastAPI -> PostgreSQL -> events table
 
-Currently, gameplay events can be submitted through the API and
-stored in PostgreSQL. Stored events can also be retrieved through
-the API.
+Currently, gameplay events can be submitted from a Godot game client,
+sent through the API, and stored in PostgreSQL. Stored events can
+also be retrieved through the API.
 
 ## Tech Stack
 
@@ -59,10 +59,10 @@ the API.
 - python-dotenv
 - Git
 - GitHub
+- Godot / GDScript SDK (partial)
 
 ### Planned
 
-- Godot / GDScript SDK
 - React
 - Redis
 - Message Queue
@@ -79,7 +79,6 @@ questmetrix/
 │
 ├── backend/
 │   ├── main.py
-│   ├── event_schema.json
 │   ├── requirements.txt
 │   ├── .env
 │   └── venv/
@@ -87,7 +86,11 @@ questmetrix/
 ├── dashboard/
 ├── database/
 ├── docs/
+│
 ├── sdk/
+│   ├── QuestMetrix.gd
+│   └── README.md
+│
 ├── tests/
 │
 ├── .gitignore
@@ -156,6 +159,10 @@ Interactive API documentation is available at:
 http://127.0.0.1:8000/docs
 ```
 
+### Godot Client Setup
+
+For instructions on setting up the Godot test client, please refer to the SDK's documentation in `sdk/README.md`.
+
 ## Features
 
 ### Currently Implemented
@@ -220,7 +227,7 @@ http://127.0.0.1:8000/docs
 - [ ] Display gameplay metrics
 - [ ] Add charts and visualizations
 
-### Phase 5 - Scalable Architecture
+### Phase 5 - Scalable Infrastructure
 
 - [ ] Add Redis caching
 - [ ] Add asynchronous event processing
@@ -229,7 +236,12 @@ http://127.0.0.1:8000/docs
 - [ ] Add API rate limiting
 - [ ] Add authentication and API keys
 
-### Phase 6 - Production Engineering
+### Phase 6 - Real-Time + Session Replay
+
+- [ ] Add WebSockets
+- [ ] Add session/replay analysis
+
+### Phase 7 - Engineering Hardening
 
 - [ ] Add automated tests
 - [ ] Add logging and monitoring
@@ -240,16 +252,16 @@ http://127.0.0.1:8000/docs
 
 ## Testing
 
-The current implementation is tested manually using the interactive
-FastAPI documentation.
+The current implementation is tested manually.
 
 Current test flow:
 
-1. Send a telemetry event using `POST /events`.
-2. Verify that the API accepts and validates the event.
-3. Verify that the event is stored in PostgreSQL.
-4. Retrieve stored events using `GET /events`.
-5. Verify the returned data against the database.
+1. Run the FastAPI backend server.
+2. Run the Godot test project.
+3. Trigger an event in the game to call `QuestMetrix.track()`.
+4. Verify that the API server logs a successful `POST /events` request.
+5. Verify that the event is stored correctly in the PostgreSQL `events` table.
+6. Optionally, use the `GET /events` endpoint to retrieve stored events and verify the data.
 
 Automated unit, integration, and load tests will be added as the
 project develops.

@@ -1,7 +1,0 @@
-{
-    "event": "enemy_killed",
-    "player_id": "player_001",
-    "game_id": "demo_game",
-    "timestamp": "2026-08-11T00:00:00Z",
-    "level": 1
-}

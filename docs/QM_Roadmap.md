@@ -16,19 +16,19 @@
 
 ## 1. Milestone Timeline (at a glance)
 
-| #   | Milestone                   | Phase   | Start           | Deadline               | Duration |
-| --- | --------------------------- | ------- | --------------- | ---------------------- | -------- |
-| 1   | Basic Telemetry Backend     | Phase 1 | —               | **DONE (11 Aug 2026)** | —        |
-| 2   | Godot SDK Integration       | Phase 2 | Mon 17 Aug 2026 | **Sun 06 Sep 2026**    | 3 weeks  |
-| 3   | Analytics Layer             | Phase 3 | Mon 07 Sep 2026 | **Sun 27 Sep 2026**    | 3 weeks  |
-| 4   | Analytics Dashboard (React) | Phase 4 | Mon 28 Sep 2026 | **Sun 18 Oct 2026**    | 3 weeks  |
-| 5   | Scalable Infrastructure     | Phase 5 | Mon 19 Oct 2026 | **Sun 15 Nov 2026**    | 4 weeks  |
-| 6   | Real-Time + Session Replay  | Phase 6 | Mon 16 Nov 2026 | **Sun 13 Dec 2026**    | 4 weeks  |
-| 7   | Engineering Hardening       | Phase 7 | Mon 14 Dec 2026 | **Sun 10 Jan 2027**    | 4 weeks  |
+| #   | Milestone                   | Phase   | Planned Start   | Deadline               | Actual Finish Date |
+| --- | --------------------------- | ------- | --------------- | ---------------------- | ------------------ |
+| 1   | Basic Telemetry Backend     | Phase 1 | —               | **DONE (11 Aug 2026)** | 11 Aug 2026        |
+| 2   | Godot SDK Integration       | Phase 2 | Mon 17 Aug 2026 | **Sun 06 Sep 2026**    | 11 Aug 2026        |
+| 3   | Analytics Layer             | Phase 3 | Mon 07 Sep 2026 | **Sun 27 Sep 2026**    | -                  |
+| 4   | Analytics Dashboard (React) | Phase 4 | Mon 28 Sep 2026 | **Sun 18 Oct 2026**    | -                  |
+| 5   | Scalable Infrastructure     | Phase 5 | Mon 19 Oct 2026 | **Sun 15 Nov 2026**    | -                  |
+| 6   | Real-Time + Session Replay  | Phase 6 | Mon 16 Nov 2026 | **Sun 13 Dec 2026**    | -                  |
+| 7   | Engineering Hardening       | Phase 7 | Mon 14 Dec 2026 | **Sun 10 Jan 2027**    | -                  |
 
 **Project v1.0 target completion: Sunday, 10 January 2027** (~5 months from today).
 
-This is deliberately conservative. If your pace is closer to 14 hrs/week consistently, you'll likely finish 3–4 weeks early — treat that as slack, not a reason to add scope.
+This is deliberately conservative. If my pace is closer to 14 hrs/week consistently, I'll likely finish 3–4 weeks early — treat that as slack, not a reason to add scope.
 
 ---
 
@@ -43,14 +43,11 @@ Already done as of 11 Aug 2026. For the record, this is what "done" looked like 
 - [x] `GET /events` retrieves stored events
 - [x] Verified with multiple events
 
-Nothing to do here. Keep this section as a reference for how specific your "Definition of Done" checklists should be.
-
 ---
 
-## 3. Milestone 2 — Godot SDK Integration
+## 3. Milestone 2 — Godot SDK Integration ✅ COMPLETE
 
 **Goal:** Replace manual Swagger testing with a real Godot game sending a real event through the SDK.
-**Window:** Mon 17 Aug – Sun 06 Sep 2026 (3 weeks, ~25 hrs total)
 
 ### Week 1 — Deadline: Sun 23 Aug 2026
 
@@ -68,17 +65,17 @@ Nothing to do here. Keep this section as a reference for how specific your "Defi
 
 ### Week 3 — Deadline: Sun 06 Sep 2026
 
-- [ ] Add error handling — what happens if the backend is down or unreachable? (log it, don't crash the game)
-- [ ] Add a short `sdk/README.md` explaining how to drop the SDK into a Godot project
-- [ ] Update main repo `README.md`: move "Godot SDK" from Planned → Implemented (partial)
-- [ ] Commit: `feat: add Godot telemetry SDK`, `feat: send events from Godot`
+- [x] Add error handling — what happens if the backend is down or unreachable? (log it, don't crash the game)
+- [x] Add a short `sdk/README.md` explaining how to drop the SDK into a Godot project
+- [x] Update main repo `README.md`: move "Godot SDK" from Planned → Implemented (partial)
+- [x] Commit: `feat: add Godot telemetry SDK`, `feat: send events from Godot`
 
 ### Milestone 2 — Definition of Done
 
-- [ ] A Godot test project can call `QuestMetrix.track("enemy_killed")`
-- [ ] The event appears in PostgreSQL without touching Swagger
-- [ ] SDK handles a dropped connection without crashing the game
-- [ ] SDK usage documented
+- [x] A Godot test project can call `QuestMetrix.track("enemy_killed")`
+- [x] The event appears in PostgreSQL without touching Swagger
+- [x] SDK handles a dropped connection without crashing the game
+- [x] SDK usage documented
 
 ### Watch out for
 
@@ -290,18 +287,8 @@ Nothing to do here. Keep this section as a reference for how specific your "Defi
 
 ---
 
-## 10. If your pace changes
+## 10. If pace changes
 
 - **Faster (14+ hrs/week consistently):** compress each phase's _week count_ by roughly 25%, but keep every sub-task — don't skip steps, just shorten the calendar around them.
 - **Slower (under 8 hrs/week):** don't panic-compress. Recompute from today's date using the same week-counts per phase; a 5-month project sliding to 7 months is a normal outcome for a solo learning project done alongside other commitments.
 - **Stuck on something for more than ~1.5x its budgeted time:** that's a signal to simplify the sub-task (ship a rougher v1) rather than keep pushing — you can always revisit and improve after the phase is closed out.
-
----
-
-## 11. What to do this week (right now)
-
-Since Milestone 1 is done and today is 11 Aug 2026, your Week 1 of Phase 2 starts **Mon 17 Aug 2026**. Between now and then:
-
-- [ ] Read through this roadmap once fully
-- [ ] Install Godot if you haven't already, so Week 1 starts with learning, not installing
-- [ ] Skim Godot's `HTTPRequest` node docs so Week 1's first task isn't a cold start

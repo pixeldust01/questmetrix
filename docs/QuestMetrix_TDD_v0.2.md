@@ -38,9 +38,11 @@ The current implementation covers the foundational API and database components. 
 
 ### 1.2 Current Implementation Status
 
-Milestone 1 is complete:
+Milestone 1 and 2 are complete:
 
 ```text
+Godot SDK
+    ↓
 Client / Swagger
        ↓
    FastAPI API
@@ -63,8 +65,10 @@ Currently implemented:
 - `GET /events`
 - environment-based database configuration
 - manual API verification through FastAPI Swagger/OpenAPI documentation
+- Godot SDK for event submission
+- SDK error handling for unreachable backend
 
-The Godot SDK, asynchronous processing, analytics layer, dashboard, Redis, authentication, rate limiting, monitoring, and other production-oriented components are planned rather than implemented.
+The asynchronous processing, analytics layer, dashboard, Redis, authentication, rate limiting, monitoring, and other production-oriented components are planned rather than implemented.
 
 ---
 
@@ -105,17 +109,15 @@ The project should not adopt complex infrastructure before the simpler version i
 - Manual API verification through Swagger/OpenAPI.
 - Database verification through SQL queries.
 
-### 2.3 Planned Scope
+### 2.3 Completed Scope — Milestone 2
 
-#### SDK Integration
+- A Godot SDK (`QuestMetrix.gd`) that can send events to the backend.
+- The SDK's `track(event_name, extra_data={})` function builds and POSTs the event payload.
+- The SDK is configurable (API URL, game ID, player ID).
+- The SDK handles connection errors gracefully without crashing the game.
+- The SDK is documented with a `README.md`.
 
-A Godot SDK will allow a real game to send events automatically rather than requiring a developer to manually submit JSON.
-
-Example target usage:
-
-```gdscript
-QuestMetrix.track("enemy_killed")
-```
+### 2.4 Planned Scope
 
 #### Analytics Layer
 
@@ -200,9 +202,12 @@ The project is also not intended to become a full commercial-scale analytics ser
 
 ### 3.1 Current Architecture
 
-The current architecture is a simple backend service.
+The current architecture is a simple backend service with a Godot SDK client.
 
 ```text
+Godot SDK
+    │
+    ▼
 Client
 (Swagger / manual JSON)
         │
@@ -267,12 +272,7 @@ This avoids a "big bang" implementation and makes failures easier to isolate.
 ### 3.4 Current-to-Target Migration Path
 
 ```text
-Milestone 1
-FastAPI → PostgreSQL
-
-        ↓
-
-Milestone 2
+Milestone 1 & 2
 Godot SDK → FastAPI → PostgreSQL
 
         ↓
@@ -335,8 +335,6 @@ Analytics API
 Dashboard
 ```
 
-The current implementation skips the SDK, queue, worker, cache, analytics, and dashboard stages.
-
 ---
 
 ## 4. Technology Stack
@@ -354,13 +352,13 @@ The current implementation skips the SDK, queue, worker, cache, analytics, and d
 | API testing       | FastAPI Swagger/OpenAPI docs | Manual API testing                | Allows endpoints to be tested without a separate frontend                |
 | Version control   | Git                          | Source/version tracking           | Provides local history and reproducible development checkpoints          |
 | Remote repository | GitHub                       | Hosted repository                 | Stores project history and supports collaboration/review                 |
+| Game SDK          | Godot / GDScript             | Game-side telemetry client        | Fits the project's game-development focus and existing Godot usage       |
 
 ### 4.2 Planned
 
 | Component         | Technology                            | Role                        | Decision / Rationale                                                                                                                                                                                                             |
 | ----------------- | ------------------------------------- | --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Game SDK          | Godot / GDScript                      | Game-side telemetry client  | Fits the project's game-development focus and existing Godot usage                                                                                                                                                               |
-| Dashboard         | React                                 | Analytics UI                | Provides a component-based frontend for data visualization                                                                                                                                                                       |
+| Dashboard         | React                                 | Analytics UI                | Planned. Provides a component-based frontend for data visualization                                                                                                                                                              |
 | Cache             | Redis                                 | Fast-access data            | Redis is planned because its in-memory data structures are suitable for frequently accessed metrics, session lookups, and real-time views                                                                                        |
 | Message queue     | RabbitMQ (candidate)                  | Asynchronous event delivery | RabbitMQ is currently the preferred candidate because it provides queues, acknowledgements, retries, and dead-lettering without requiring the operational complexity of a large event-streaming platform at this project's scale |
 | Workers           | Python background workers             | Event processing            | Decouples ingestion from processing                                                                                                                                                                                              |
@@ -560,8 +558,6 @@ HTTP 200 OK
 ```
 
 The current implementation does not explicitly set `201 Created`, so the observed success response is `200 OK`.
-
-**Current success response:**
 
 ```json
 {
