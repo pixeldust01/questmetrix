@@ -163,27 +163,28 @@ http://127.0.0.1:8000/docs
 - FastAPI backend
 - PostgreSQL database
 - Telemetry event schema
-- `POST /events` endpoint
-- `GET /events` endpoint
+- `POST /events`
+- `GET /events`
 - Event validation using Pydantic
-- Persistent storage of telemetry events
-- Interactive API documentation through FastAPI
-- Environment-based database configuration
+- Persistent telemetry storage
+- Godot telemetry SDK (partial)
+- Godot → FastAPI event submission
+- SDK error handling for unreachable backend
 
 ### Planned
 
-- Godot SDK
-- Automatic gameplay event collection
 - React analytics dashboard
-- Gameplay analytics and metrics
-- Player/session analysis
-- API authentication and API keys
+- Gameplay analytics
 - Redis caching
 - Asynchronous event processing
-- Message queue integration
-- Real-time dashboard updates
+- Message queue
+- Background workers
+- API authentication
 - API rate limiting
-- Logging and monitoring
+- WebSockets
+- Session/replay analysis
+- Docker
+- CI/CD
 - Load testing
 
 ## Roadmap
@@ -200,10 +201,10 @@ http://127.0.0.1:8000/docs
 
 ### Phase 2 - Game SDK
 
-- [ ] Create QuestMetrix Godot SDK
-- [ ] Implement `track()` function
-- [ ] Connect Godot SDK to the backend
-- [ ] Send gameplay events from a test game
+- [x] Create QuestMetrix Godot SDK
+- [x] Implement `track()` function
+- [x] Connect Godot SDK to the backend
+- [x] Send gameplay events from a test game
 
 ### Phase 3 - Analytics
 
