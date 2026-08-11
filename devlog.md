@@ -2,6 +2,17 @@
 
 A chronological log of the project's development milestones.
 
+### 11 August 2026
+
+- **TDD v0.2:** Added a new Technical Design Document (TDD) version 0.2 for Questmetrix.
+- **Documentation Improvement:** Created a TDD improvement file to facilitate future documentation enhancements.
+
+  **Challenges:**
+  - None so far
+
+  **Next Steps:**
+  - Begin Milestone 2: Godot SDK Integration to allow game events to be sent directly to the API.
+
 ### 10 August 2026
 
 - **Project Foundation:** The project's identity, GitHub repository, and local directory structure have been established.
