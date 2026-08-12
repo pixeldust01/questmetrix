@@ -177,6 +177,7 @@ For instructions on setting up the Godot test client, please refer to the SDK's 
 - Godot telemetry SDK (partial)
 - Godot → FastAPI event submission
 - SDK error handling for unreachable backend
+- Analytics endpoints to retrieve aggregated game, player, and level data
 
 ### Planned
 

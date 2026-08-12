@@ -2,6 +2,16 @@
 
 A chronological log of the project's development milestones.
 
+### 13 August 2026
+
+- For Milestone 3, I built the analytics layer: added SQL aggregations and `GET /games` and `GET /players`, generated realistic multi-player/multi-level mock telemetry, and implemented `GET /levels` for completion rates, deaths, and average completion time. I then refactored the backend into `main.py`, `events.py`, `analytics.py`, and `database.py`, while verifying timestamp handling and all five endpoints.
+
+**Next:** add automated backend tests, finish the analytics/session/retention work, update documentation and commits, then begin the React analytics dashboard.
+
+### 12 August 2026
+
+- Since Milestone 2, I replaced manual Swagger event submission with a working Godot SDK: `QuestMetrix.track()` now sends real gameplay events to FastAPI, with error handling for an unreachable backend and SDK documentation.
+
 ### 11 August 2026
 
 - **Completed Milestone 2 (Godot SDK Integration):** Successfully created and integrated the `QuestMetrix.gd` SDK. A test Godot game can now send events directly to the backend API, and the SDK includes error handling and documentation.
@@ -26,3 +36,4 @@ A chronological log of the project's development milestones.
 
   **Next Steps:**
   - Begin Milestone 2: Godot SDK Integration to allow game events to be sent directly to the API.
+  

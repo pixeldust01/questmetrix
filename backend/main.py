@@ -1,11 +1,13 @@
-import os
-import psycopg2
-
-from dotenv import load_dotenv
-from fastapi import FastAPI
+from fastapi import FastAPI, Query
 from pydantic import BaseModel
+from database import get_db_connection
+from events import create_event, get_all_events
 
-load_dotenv()
+from analytics import (
+    get_game_statistics,
+    get_level_statistics,
+    get_player_statistics,
+)
 
 app = FastAPI()
 
@@ -16,77 +18,45 @@ class Event(BaseModel):
     timestamp: str
     level: int
 
-def get_db_connection():
-    return psycopg2.connect(
-        host=os.getenv("DB_HOST"),
-        port=os.getenv("DB_PORT"),
-        database=os.getenv("DB_NAME"),
-        user=os.getenv("DB_USER"),
-        password=os.getenv("DB_PASSWORD")
-    )
 
 @app.get("/")
 def root():
     return {"message": "QuestMetrix backend is running!"}
 
 @app.post("/events")
-def receive_event(event: Event):
-    connection = get_db_connection()
-    cursor = connection.cursor()
-
-    cursor.execute(
-        """
-        INSERT INTO events (event, player_id, game_id, timestamp, level)
-        VALUES (%s, %s, %s, %s, %s)
-        """,
-        (
-            event.event,
-            event.player_id,
-            event.game_id,
-            event.timestamp,
-            event.level
-        )
-    )
-
-    connection.commit()
-
-    cursor.close()
-    connection.close()
+def create_event_endpoint(event: Event):
+    event_id = create_event(event)
 
     return {
         "message": "Event stored successfully!",
-        "event": event
+        "id": event_id
     }
 
 @app.get("/events")
 def get_events():
-    connection = get_db_connection()
-    cursor = connection.cursor()
+    rows = get_all_events()
 
-    cursor.execute(
-        """
-        SELECT id, event, player_id, game_id, timestamp, level
-        FROM events
-        ORDER BY id;
-        """
-    )
-
-    rows = cursor.fetchall()
-
-    cursor.close()
-    connection.close()
-
-    events = []
-
-    for row in rows:
-        events.append({
+    return [
+        {
             "id": row[0],
             "event": row[1],
             "player_id": row[2],
             "game_id": row[3],
             "timestamp": row[4],
-            "level": row[5]
-        })
+            "level": row[5],
+        }
+        for row in rows
+    ]
 
-    return {"events": events}
+@app.get("/games")
+def get_games():
+    return get_game_statistics()
+
+@app.get("/players")
+def get_players():
+    return get_player_statistics()
+
+@app.get("/levels")
+def get_levels(game_id: str):
+    return get_level_statistics(game_id)
 

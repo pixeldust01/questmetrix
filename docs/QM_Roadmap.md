@@ -1,6 +1,11 @@
-# QuestMetrix — Project Roadmap
+# QuestMetrix — Project Roadmap v1.0
 
-**Generated:** 11 Aug 2026 · **Pace assumption:** 8–14 hrs/week (evenings + weekends) · **Planning horizon:** ~21 weeks
+**Date:** 11 Aug 2026
+
+**Technical Design Document:** [QuestMetrix_TDD_v0.2.md](QuestMetrix_TDD_v0.2.md)
+
+**Pace assumption:** 8–14 hrs/week (evenings + weekends)
+**Planning horizon:** ~21 weeks
 
 ---
 
@@ -91,15 +96,15 @@ Already done as of 11 Aug 2026. For the record, this is what "done" looked like 
 
 ### Week 1 — Deadline: Sun 13 Sep 2026
 
-- [ ] Write raw SQL (or SQLAlchemy, if you introduce it here) for: event counts by type, by game, by level
-- [ ] Build `GET /games` — list distinct games with basic event totals
-- [ ] Build `GET /players` — list distinct players with basic event totals
+- [x] Write raw SQL (or SQLAlchemy, if you introduce it here) for: event counts by type, by game, by level
+- [x] Build `GET /games` — list distinct games with basic event totals
+- [x] Build `GET /players` — list distinct players with basic event totals
 - **Definition of done for the week:** both endpoints return real aggregated numbers from your test data.
 
 ### Week 2 — Deadline: Sun 20 Sep 2026
 
-- [ ] Build level statistics: completion rate, average deaths per level, average time-to-complete (needs `level_completed` + `player_died` events with timestamps)
-- [ ] Generate more realistic mock event data (a small Python script that inserts a batch of varied test events) so your aggregates aren't trivial
+- [x] Build level statistics: completion rate, average deaths per level, average time-to-complete (needs `level_completed` + `player_died` events with timestamps)
+- [x] Generate more realistic mock event data (a small Python script that inserts a batch of varied test events) so your aggregates aren't trivial
 - **Definition of done for the week:** you can answer "how many players died on Level 3?" via an API call.
 
 ### Week 3 — Deadline: Sun 27 Sep 2026
