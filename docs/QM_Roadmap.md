@@ -25,7 +25,7 @@
 | --- | --------------------------- | ------- | --------------- | ---------------------- | ------------------ |
 | 1   | Basic Telemetry Backend     | Phase 1 | —               | **DONE (11 Aug 2026)** | 11 Aug 2026        |
 | 2   | Godot SDK Integration       | Phase 2 | Mon 17 Aug 2026 | **Sun 06 Sep 2026**    | 11 Aug 2026        |
-| 3   | Analytics Layer             | Phase 3 | Mon 07 Sep 2026 | **Sun 27 Sep 2026**    | -                  |
+| 3   | Analytics Layer             | Phase 3 | Mon 07 Sep 2026 | **Sun 27 Sep 2026**    | 13 Aug 2026        |
 | 4   | Analytics Dashboard (React) | Phase 4 | Mon 28 Sep 2026 | **Sun 18 Oct 2026**    | -                  |
 | 5   | Scalable Infrastructure     | Phase 5 | Mon 19 Oct 2026 | **Sun 15 Nov 2026**    | -                  |
 | 6   | Real-Time + Session Replay  | Phase 6 | Mon 16 Nov 2026 | **Sun 13 Dec 2026**    | -                  |
@@ -89,7 +89,7 @@ Already done as of 11 Aug 2026. For the record, this is what "done" looked like 
 
 ---
 
-## 4. Milestone 3 — Analytics Layer
+## 4. Milestone 3 — Analytics Layer ✅ COMPLETE
 
 **Goal:** Turn raw events into aggregated, queryable statistics — no dashboard yet, just API endpoints returning numbers.
 **Window:** Mon 07 Sep – Sun 27 Sep 2026 (3 weeks, ~30 hrs total)
@@ -109,17 +109,17 @@ Already done as of 11 Aug 2026. For the record, this is what "done" looked like 
 
 ### Week 3 — Deadline: Sun 27 Sep 2026
 
-- [ ] Define a **session** conceptually (e.g., events from the same `player_id` within a gap-free time window) and implement basic session grouping
-- [ ] Add a first-pass retention stat (e.g., did a player return with events on a later calendar day?)
-- [ ] Commit: `feat: add analytics aggregation`
-- [ ] Update README: Planned → Implemented for player/level/session analytics
+- [x] Define a **session** conceptually (e.g., events from the same `player_id` within a gap-free time window) and implement basic session grouping. Here, keeping gap-time as 30 minutes.
+- [x] Add a first-pass retention stat (e.g., did a player return with events on a later calendar day?)
+- [x] Commit: `feat: add analytics aggregation`
+- [x] Update README: Planned → Implemented for player/level/session analytics
 
 ### Milestone 3 — Definition of Done
 
-- [ ] `GET /games`, `GET /players` return real aggregates
-- [ ] Level-level stats (completion rate, deaths, avg time) work
-- [ ] Sessions can be identified from raw events
-- [ ] A basic retention number can be computed
+- [x] `GET /games`, `GET /players` return real aggregates
+- [x] Level-level stats (completion rate, deaths, avg time) work
+- [x] Sessions can be identified from raw events
+- [x] A basic retention number can be computed
 
 ### Watch out for
 

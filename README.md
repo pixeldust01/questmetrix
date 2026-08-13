@@ -72,31 +72,6 @@ also be retrieved through the API.
 - CI/CD
 - Load testing
 
-## Project Structure
-
-```text
-questmetrix/
-│
-├── backend/
-│   ├── main.py
-│   ├── requirements.txt
-│   ├── .env
-│   └── venv/
-│
-├── dashboard/
-├── database/
-├── docs/
-│
-├── sdk/
-│   ├── QuestMetrix.gd
-│   └── README.md
-│
-├── tests/
-│
-├── .gitignore
-├── LICENSE
-└── README.md
-```
 
 ## Getting Started
 
@@ -178,11 +153,11 @@ For instructions on setting up the Godot test client, please refer to the SDK's 
 - Godot → FastAPI event submission
 - SDK error handling for unreachable backend
 - Analytics endpoints to retrieve aggregated game, player, and level data
+- Session and retention analysis
 
 ### Planned
 
 - React analytics dashboard
-- Gameplay analytics
 - Redis caching
 - Asynchronous event processing
 - Message queue
@@ -216,10 +191,10 @@ For instructions on setting up the Godot test client, please refer to the SDK's 
 
 ### Phase 3 - Analytics
 
-- [ ] Implement basic gameplay metrics
-- [ ] Add player statistics
-- [ ] Add level progression analysis
-- [ ] Add session analysis
+- [x] Implement basic gameplay metrics
+- [x] Add player statistics
+- [x] Add level progression analysis
+- [x] Add session analysis
 
 ### Phase 4 - Dashboard
 
@@ -253,7 +228,11 @@ For instructions on setting up the Godot test client, please refer to the SDK's 
 
 ## Testing
 
-The current implementation is tested manually.
+Run automated backend tests have been added using this `pytest` command from directory `backend/`:
+
+```bash
+python -m pytest
+```
 
 Current test flow:
 
@@ -264,8 +243,7 @@ Current test flow:
 5. Verify that the event is stored correctly in the PostgreSQL `events` table.
 6. Optionally, use the `GET /events` endpoint to retrieve stored events and verify the data.
 
-Automated unit, integration, and load tests will be added as the
-project develops.
+Further unit, integration, and load tests will be added as the project develops.
 
 ## License
 

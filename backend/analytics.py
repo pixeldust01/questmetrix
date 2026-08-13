@@ -188,3 +188,159 @@ def get_player_statistics():
         for row in rows
     ]
 
+def get_sessions(game_id: str):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute(
+        """
+        WITH ordered_events AS (
+            SELECT
+                player_id,
+                game_id,
+                timestamp,
+                event,
+                level,
+
+                LAG(timestamp) OVER (
+                    PARTITION BY player_id, game_id
+                    ORDER BY timestamp
+                ) AS previous_timestamp
+
+            FROM events
+
+            WHERE game_id = %s
+        ),
+
+        session_markers AS (
+            SELECT
+                *,
+                CASE
+                    WHEN previous_timestamp IS NULL THEN 1
+                    WHEN timestamp - previous_timestamp
+                         > INTERVAL '30 minutes'
+                    THEN 1
+                    ELSE 0
+                END AS new_session
+
+            FROM ordered_events
+        ),
+
+        session_numbers AS (
+            SELECT
+                *,
+                SUM(new_session) OVER (
+                    PARTITION BY player_id, game_id
+                    ORDER BY timestamp
+                ) AS session_number
+
+            FROM session_markers
+        )
+
+        SELECT
+            player_id,
+            game_id,
+            session_number,
+            MIN(timestamp) AS session_start,
+            MAX(timestamp) AS session_end,
+            COUNT(*) AS event_count
+
+        FROM session_numbers
+
+        GROUP BY
+            player_id,
+            game_id,
+            session_number
+
+        ORDER BY
+            player_id,
+            session_number;
+        """,
+        (game_id,),
+    )
+
+    rows = cursor.fetchall()
+
+    cursor.close()
+    conn.close()
+
+    return [
+        {
+            "player_id": row[0],
+            "game_id": row[1],
+            "session_number": row[2],
+            "session_start": row[3],
+            "session_end": row[4],
+            "event_count": row[5],
+        }
+        for row in rows
+    ]
+
+def get_retention(game_id: str):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute(
+        """
+        WITH daily_players AS (
+            SELECT DISTINCT
+                player_id,
+                DATE(timestamp) AS activity_date
+            FROM events
+            WHERE game_id = %s
+        ),
+
+        day_zero AS (
+            SELECT
+                player_id,
+                activity_date AS cohort_date
+            FROM daily_players
+        ),
+
+        retained_players AS (
+            SELECT DISTINCT
+                d0.player_id,
+                d0.cohort_date
+            FROM day_zero d0
+
+            JOIN daily_players d1
+                ON d0.player_id = d1.player_id
+                AND d1.activity_date =
+                    d0.cohort_date + INTERVAL '1 day'
+        )
+
+        SELECT
+            d0.cohort_date,
+            COUNT(DISTINCT d0.player_id),
+            COUNT(DISTINCT r.player_id),
+            ROUND(
+                COUNT(DISTINCT r.player_id) * 100.0
+                / NULLIF(COUNT(DISTINCT d0.player_id), 0),
+                2
+            )
+        FROM day_zero d0
+
+        LEFT JOIN retained_players r
+            ON d0.player_id = r.player_id
+            AND d0.cohort_date = r.cohort_date
+
+        GROUP BY d0.cohort_date
+        ORDER BY d0.cohort_date;
+        """,
+        (game_id,),
+    )
+
+    rows = cursor.fetchall()
+
+    cursor.close()
+    conn.close()
+
+    return [
+        {
+            "cohort_date": row[0],
+            "players_active": row[1],
+            "players_returned": row[2],
+            "day_1_retention": float(row[3]),
+        }
+        for row in rows
+    ]

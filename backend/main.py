@@ -7,7 +7,9 @@ from analytics import (
     get_game_statistics,
     get_level_statistics,
     get_player_statistics,
-)
+    get_sessions,
+    get_retention
+) 
 
 app = FastAPI()
 
@@ -60,3 +62,10 @@ def get_players():
 def get_levels(game_id: str):
     return get_level_statistics(game_id)
 
+@app.get("/sessions")
+def get_sessions_endpoint(game_id: str):
+    return get_sessions(game_id)
+
+@app.get("/retention")
+def get_retention_endpoint(game_id: str):
+    return get_retention(game_id)
