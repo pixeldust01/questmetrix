@@ -1,4 +1,5 @@
-from fastapi import FastAPI, Query
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from database import get_db_connection
 from events import create_event, get_all_events
@@ -8,10 +9,17 @@ from analytics import (
     get_level_statistics,
     get_player_statistics,
     get_sessions,
-    get_retention
+    get_retention,
 ) 
 
 app = FastAPI()
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 class Event(BaseModel):
     event: str

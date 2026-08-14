@@ -60,10 +60,10 @@ also be retrieved through the API.
 - Git
 - GitHub
 - Godot / GDScript SDK (partial)
+- React
 
 ### Planned
 
-- React
 - Redis
 - Message Queue
 - WebSockets
@@ -71,7 +71,6 @@ also be retrieved through the API.
 - Automated testing
 - CI/CD
 - Load testing
-
 
 ## Getting Started
 
@@ -106,7 +105,7 @@ Install the dependencies:
 pip install -r requirements.txt
 ```
 
-Create a `.env` file inside the `backend/` directory:
+Create a `.env` file inside the `backend/` directory with your private PostgreSQL credentials:
 
 ```env
 DB_HOST=localhost
@@ -134,6 +133,22 @@ Interactive API documentation is available at:
 http://127.0.0.1:8000/docs
 ```
 
+### Frontend Setup
+
+Install the dependencies from the dashboard directory `/dashboard`:
+
+```bash
+npm install
+```
+
+Start the Vite development server:
+
+```bash
+npm run dev
+```
+
+The dashboard is available at `http://localhost:5173`.
+
 ### Godot Client Setup
 
 For instructions on setting up the Godot test client, please refer to the SDK's documentation in `sdk/README.md`.
@@ -154,10 +169,10 @@ For instructions on setting up the Godot test client, please refer to the SDK's 
 - SDK error handling for unreachable backend
 - Analytics endpoints to retrieve aggregated game, player, and level data
 - Session and retention analysis
+- React analytics dashboard
 
 ### Planned
 
-- React analytics dashboard
 - Redis caching
 - Asynchronous event processing
 - Message queue
@@ -198,10 +213,10 @@ For instructions on setting up the Godot test client, please refer to the SDK's 
 
 ### Phase 4 - Dashboard
 
-- [ ] Build React dashboard
-- [ ] Display raw events
-- [ ] Display gameplay metrics
-- [ ] Add charts and visualizations
+- [x] Build React dashboard
+- [x] Display raw events
+- [x] Display gameplay metrics
+- [x] Add charts and visualizations
 
 ### Phase 5 - Scalable Infrastructure
 

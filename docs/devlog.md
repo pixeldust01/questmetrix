@@ -2,6 +2,10 @@
 
 A chronological log of the project's development milestones.
 
+### 15 August 2026
+
+- **Completed Milestone 4 (Analytics Dashboard):** Successfully developed a React application in the `dashboard/` directory to visualize key analytics. The dashboard connects to the FastAPI backend and features a raw event table, summary statistic cards, and charts for trends like events over time and level completion rates. It also properly handles UI loading and error states.
+
 ### 13 August 2026
 
 - Implemented session grouping based on a 30-minute inactivity window and added a basic daily retention metric to track returning players. Finished with Milestone 3.

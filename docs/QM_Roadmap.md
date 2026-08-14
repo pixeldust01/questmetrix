@@ -135,28 +135,28 @@ Already done as of 11 Aug 2026. For the record, this is what "done" looked like 
 
 ### Week 1 — Deadline: Sun 04 Oct 2026
 
-- [ ] Scaffold the React app inside `dashboard/` (Vite recommended for a lighter setup than CRA)
-- [ ] Build a raw event table view: fetch `GET /events`, render as a table
-- [ ] Confirm CORS is configured on the FastAPI side so the dashboard can actually call it
+- [x] Scaffold the React app inside `dashboard/` (Vite recommended for a lighter setup than CRA)
+- [x] Build a raw event table view: fetch `GET /events`, render as a table
+- [x] Confirm CORS is configured on the FastAPI side so the dashboard can actually call it
 
 ### Week 2 — Deadline: Sun 11 Oct 2026
 
-- [ ] Build summary cards: total events, unique players, unique games
-- [ ] Wire cards to the Phase 3 endpoints (`/games`, `/players`)
-- [ ] Basic layout/styling pass — doesn't need to be beautiful, needs to be legible
+- [x] Build summary cards: total events, unique players, unique games
+- [x] Wire cards to the Phase 3 endpoints (`/games`, `/players`)
+- [x] Basic layout/styling pass — doesn't need to be beautiful, needs to be legible
 
 ### Week 3 — Deadline: Sun 18 Oct 2026
 
-- [ ] Add charts (recharts is a reasonable first choice): events-over-time, level completion rates
-- [ ] Handle loading and error states (what shows while data is fetching, what shows if the API is down)
-- [ ] Commit: `feat: create analytics dashboard`
-- [ ] Update README: Planned → Implemented for dashboard
+- [x] Add charts (recharts is a reasonable first choice): events-over-time, level completion rates
+- [x] Handle loading and error states (what shows while data is fetching, what shows if the API is down)
+- [x] Commit: `feat: create analytics dashboard`
+- [x] Update README: Planned → Implemented for dashboard
 
 ### Milestone 4 — Definition of Done
 
-- [ ] Dashboard runs locally and fetches live data from FastAPI
-- [ ] Raw events, summary stats, and at least 2 charts are visible
-- [ ] Loading/error states don't show a blank white screen
+- [x] Dashboard runs locally and fetches live data from FastAPI
+- [x] Raw events, summary stats, and at least 2 charts are visible
+- [x] Loading/error states don't show a blank white screen
 
 ### Watch out for
 
