@@ -61,13 +61,13 @@ also be retrieved through the API.
 - GitHub
 - Godot / GDScript SDK (partial)
 - React
+- Redis
+- Docker
 
 ### Planned
 
-- Redis
 - Message Queue
 - WebSockets
-- Docker
 - Automated testing
 - CI/CD
 - Load testing
@@ -170,10 +170,11 @@ For instructions on setting up the Godot test client, please refer to the SDK's 
 - Analytics endpoints to retrieve aggregated game, player, and level data
 - Session and retention analysis
 - React analytics dashboard
+- Redis caching
+- Docker
 
 ### Planned
 
-- Redis caching
 - Asynchronous event processing
 - Message queue
 - Background workers
@@ -181,7 +182,6 @@ For instructions on setting up the Godot test client, please refer to the SDK's 
 - API rate limiting
 - WebSockets
 - Session/replay analysis
-- Docker
 - CI/CD
 - Load testing
 

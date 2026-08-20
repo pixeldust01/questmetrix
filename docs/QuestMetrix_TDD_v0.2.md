@@ -98,7 +98,9 @@ Scalability and operational hardening
 
 The project should not adopt complex infrastructure before the simpler version is understood and verified.
 
-### 2.2 Completed Scope — Milestone 1
+### 2.2 Completed Scope
+
+#### Milestone 1
 
 - A working FastAPI + PostgreSQL backend.
 - A defined telemetry event structure.
@@ -109,15 +111,13 @@ The project should not adopt complex infrastructure before the simpler version i
 - Manual API verification through Swagger/OpenAPI.
 - Database verification through SQL queries.
 
-### 2.3 Completed Scope — Milestone 2
+#### Milestone 2
 
 - A Godot SDK (`QuestMetrix.gd`) that can send events to the backend.
 - The SDK's `track(event_name, extra_data={})` function builds and POSTs the event payload.
 - The SDK is configurable (API URL, game ID, player ID).
 - The SDK handles connection errors gracefully without crashing the game.
 - The SDK is documented with a `README.md`.
-
-### 2.4 Planned Scope
 
 #### Analytics Layer
 
@@ -147,12 +147,19 @@ A React dashboard will visualize analytics through:
 The target architecture may introduce:
 
 - Redis
+- Docker
+
+### 2.3 Planned Scope
+
+#### Scalable Infrastructure
+
+The target architecture may introduce:
+
 - a message queue
 - background workers
 - rate limiting
 - API authentication
 - WebSockets
-- Docker
 - CI/CD
 - monitoring and alerting
 
@@ -341,29 +348,29 @@ Dashboard
 
 ### 4.1 Currently Used
 
-| Component         | Technology                   | Role                              | Reason                                                                   |
-| ----------------- | ---------------------------- | --------------------------------- | ------------------------------------------------------------------------ |
-| Language          | Python                       | Backend programming language      | Familiar, readable, and suitable for rapid backend development           |
-| API framework     | FastAPI                      | HTTP API and routing              | Provides typed request validation and automatic OpenAPI documentation    |
-| Validation        | Pydantic                     | Event data contracts              | Integrates directly with FastAPI and validates structured payloads       |
-| Database          | PostgreSQL 18                | Persistent event storage          | Relational, mature, structured, and suitable for querying telemetry data |
-| DB driver         | psycopg2-binary              | Python → PostgreSQL communication | Provides PostgreSQL connectivity from Python                             |
-| Config loader     | python-dotenv                | Environment configuration         | Keeps database credentials outside source code                           |
-| API testing       | FastAPI Swagger/OpenAPI docs | Manual API testing                | Allows endpoints to be tested without a separate frontend                |
-| Version control   | Git                          | Source/version tracking           | Provides local history and reproducible development checkpoints          |
-| Remote repository | GitHub                       | Hosted repository                 | Stores project history and supports collaboration/review                 |
-| Game SDK          | Godot / GDScript             | Game-side telemetry client        | Fits the project's game-development focus and existing Godot usage       |
+| Component         | Technology                   | Role                              | Reason                                                                                                                            |
+| ----------------- | ---------------------------- | --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| Language          | Python                       | Backend programming language      | Familiar, readable, and suitable for rapid backend development                                                                    |
+| API framework     | FastAPI                      | HTTP API and routing              | Provides typed request validation and automatic OpenAPI documentation                                                             |
+| Validation        | Pydantic                     | Event data contracts              | Integrates directly with FastAPI and validates structured payloads                                                                |
+| Database          | PostgreSQL 18                | Persistent event storage          | Relational, mature, structured, and suitable for querying telemetry data                                                          |
+| DB driver         | psycopg2-binary              | Python → PostgreSQL communication | Provides PostgreSQL connectivity from Python                                                                                      |
+| Config loader     | python-dotenv                | Environment configuration         | Keeps database credentials outside source code                                                                                    |
+| API testing       | FastAPI Swagger/OpenAPI docs | Manual API testing                | Allows endpoints to be tested without a separate frontend                                                                         |
+| Version control   | Git                          | Source/version tracking           | Provides local history and reproducible development checkpoints                                                                   |
+| Remote repository | GitHub                       | Hosted repository                 | Stores project history and supports collaboration/review                                                                          |
+| Game SDK          | Godot / GDScript             | Game-side telemetry client        | Fits the project's game-development focus and existing Godot usage                                                                |
+| Dashboard         | React                        | Analytics UI                      | Provides a component-based frontend for data visualization                                                                        |
+| Cache             | Redis                        | Fast-access data                  | Redis is used as its in-memory data structures are suitable for frequently accessed metrics, session lookups, and real-time views |
+| Containerization  | Docker                       | Reproducible deployment           | Makes development and deployment environments consistent, so the full stack can be launched with a single command                 |
 
 ### 4.2 Planned
 
 | Component         | Technology                            | Role                        | Decision / Rationale                                                                                                                                                                                                             |
 | ----------------- | ------------------------------------- | --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Dashboard         | React                                 | Analytics UI                | Planned. Provides a component-based frontend for data visualization                                                                                                                                                              |
-| Cache             | Redis                                 | Fast-access data            | Redis is planned because its in-memory data structures are suitable for frequently accessed metrics, session lookups, and real-time views                                                                                        |
 | Message queue     | RabbitMQ (candidate)                  | Asynchronous event delivery | RabbitMQ is currently the preferred candidate because it provides queues, acknowledgements, retries, and dead-lettering without requiring the operational complexity of a large event-streaming platform at this project's scale |
 | Workers           | Python background workers             | Event processing            | Decouples ingestion from processing                                                                                                                                                                                              |
 | Real-time updates | WebSockets                            | Live dashboard updates      | Allows the server to push relevant changes without polling                                                                                                                                                                       |
-| Containerization  | Docker                                | Reproducible deployment     | Makes development and deployment environments consistent                                                                                                                                                                         |
 | CI/CD             | GitHub Actions or similar             | Automated workflow          | Automates testing and deployment checks                                                                                                                                                                                          |
 | Testing           | pytest + integration/E2E/load tooling | Quality assurance           | Supports unit, integration, end-to-end, and performance testing                                                                                                                                                                  |
 

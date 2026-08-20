@@ -2,6 +2,17 @@
 
 A chronological log of the project's development milestones.
 
+### 20 August 2026
+
+- **Containerized Core Services:** Dockerized the FastAPI backend and PostgreSQL database. Created the necessary `Dockerfile`, `.dockerignore`, and `docker-compose.yml` to manage the services, with the database accessible via pgAdmin.
+- **Implemented Redis Caching:** Integrated Redis to improve performance. The `/games` endpoint now features a 60-second cache, with logic to handle cache hits, expiry, and manual invalidation successfully tested.
+
+  **Challenges:**
+  - Spent two nights troubleshooting WSL and Windows Update corruption issues that caused persistent "Windows timed out" errors while setting up Docker for the first time. On the bright side, I caught up on some great short dramas.
+
+  **Next Steps:**
+  - Prepare to work on Milestone 5: Week 2, Redis Streams (?). Research.
+
 ### 15 August 2026
 
 - **Completed Milestone 4 (Analytics Dashboard):** Successfully developed a React application in the `dashboard/` directory to visualize key analytics. The dashboard connects to the FastAPI backend and features a raw event table, summary statistic cards, and charts for trends like events over time and level completion rates. It also properly handles UI loading and error states.

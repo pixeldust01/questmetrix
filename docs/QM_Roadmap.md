@@ -26,7 +26,7 @@
 | 1   | Basic Telemetry Backend     | Phase 1 | —               | **DONE (11 Aug 2026)** | 11 Aug 2026        |
 | 2   | Godot SDK Integration       | Phase 2 | Mon 17 Aug 2026 | **Sun 06 Sep 2026**    | 11 Aug 2026        |
 | 3   | Analytics Layer             | Phase 3 | Mon 07 Sep 2026 | **Sun 27 Sep 2026**    | 13 Aug 2026        |
-| 4   | Analytics Dashboard (React) | Phase 4 | Mon 28 Sep 2026 | **Sun 18 Oct 2026**    | -                  |
+| 4   | Analytics Dashboard (React) | Phase 4 | Mon 28 Sep 2026 | **Sun 18 Oct 2026**    | 15 Aug 2026        |
 | 5   | Scalable Infrastructure     | Phase 5 | Mon 19 Oct 2026 | **Sun 15 Nov 2026**    | -                  |
 | 6   | Real-Time + Session Replay  | Phase 6 | Mon 16 Nov 2026 | **Sun 13 Dec 2026**    | -                  |
 | 7   | Engineering Hardening       | Phase 7 | Mon 14 Dec 2026 | **Sun 10 Jan 2027**    | -                  |
@@ -128,7 +128,7 @@ Already done as of 11 Aug 2026. For the record, this is what "done" looked like 
 
 ---
 
-## 5. Milestone 4 — Analytics Dashboard (React)
+## 5. Milestone 4 — Analytics Dashboard (React) ✅ COMPLETE
 
 **Goal:** A React app that visualizes what Phase 3 computes — the first time non-technical eyes could look at QuestMetrix and understand it.
 **Window:** Mon 28 Sep – Sun 18 Oct 2026 (3 weeks, ~28 hrs total)
@@ -172,9 +172,9 @@ Already done as of 11 Aug 2026. For the record, this is what "done" looked like 
 
 ### Week 1 — Deadline: Sun 25 Oct 2026
 
-- [ ] Install Redis locally, connect from Python (`redis-py`)
-- [ ] Add a caching layer for one expensive read (e.g., cache `GET /games` aggregates for 60s)
-- [ ] Verify cache invalidation logic — this is the part people get wrong, don't skip testing it
+- [x] Install Redis locally, connect from Python (`redis-py`)
+- [x] Add a caching layer for one expensive read (e.g., cache `GET /games` aggregates for 60s)
+- [x] Verify cache invalidation logic — this is the part people get wrong, don't skip testing it
 
 ### Week 2 — Deadline: Sun 01 Nov 2026
 

@@ -1,4 +1,5 @@
 from database import get_db_connection
+from redis_client import redis_client
 
 def get_level_statistics(game_id: str):
     conn = get_db_connection()
@@ -137,6 +138,12 @@ def get_level_statistics(game_id: str):
     ]
 
 def get_game_statistics():
+    cached_data = redis_client.get("games:statistics")
+
+    if cached_data:
+        import json
+        return json.loads(cached_data)
+
     conn = get_db_connection()
     cursor = conn.cursor()
 
@@ -154,13 +161,24 @@ def get_game_statistics():
     cursor.close()
     conn.close()
 
-    return [
+    game_statistics = [
         {
             "game_id": row[0],
             "event_count": row[1]
         }
         for row in rows
     ]
+
+    import json
+
+    redis_client.set(
+        name="games:statistics",
+        value=json.dumps(game_statistics),
+        ex=60,
+    )
+
+    return game_statistics
+
 
 def get_player_statistics():
     conn = get_db_connection()

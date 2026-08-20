@@ -1,0 +1,21 @@
+services:
+  redis:
+    image: redis:7
+    container_name: questmetrix-redis
+    ports:
+      - "6379:6379"
+
+  postgres:
+    image: postgres:16
+    container_name: questmetrix-postgres
+    environment:
+      POSTGRES_DB: questmetrix
+      POSTGRES_USER: questmetrix
+      POSTGRES_PASSWORD: questmetrix
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:

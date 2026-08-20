@@ -1,4 +1,5 @@
 from database import get_db_connection
+from redis_client import redis_client
 
 def create_event(event):
     conn = get_db_connection()
@@ -28,6 +29,7 @@ def create_event(event):
     event_id = cursor.fetchone()[0]
 
     conn.commit()
+    redis_client.delete("games:statistics")
 
     cursor.close()
     conn.close()
