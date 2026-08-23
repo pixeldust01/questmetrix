@@ -1,7 +1,7 @@
 # Technical Design Document (TDD): QuestMetrix
 
-**Version:** v0.2  
-**Date:** 11 Aug 2026  
+**Version:** v0.22
+**Date:** 24 Aug 2026  
 **Status:** Living document — update as milestones close
 
 ---
@@ -34,24 +34,32 @@ Analytics API
 Analytics Dashboard
 ```
 
-The current implementation covers the foundational API and database components. The project is being developed incrementally so that each architectural component is understood, tested, and stabilized before the next component is introduced.
+As of this revision, the implementation covers the API, database, SDK, analytics layer, dashboard, and the asynchronous queue/worker pipeline (§1.2). The project is being developed incrementally so that each architectural component is understood, tested, and stabilized before the next component is introduced.
 
 ### 1.2 Current Implementation Status
 
-Milestone 1 and 2 are complete:
+Milestones 1 through 4 are complete, and Milestone 5 (Scalable Infrastructure) is in progress — the asynchronous pipeline (queue + worker) is live, and rate limiting/authentication are the remaining open items:
 
 ```text
-Godot SDK
-    ↓
-Client / Swagger
+Godot SDK / Client
        ↓
    FastAPI API
        ↓
 Pydantic validation
        ↓
+Redis Streams (queue)
+       ↓
+  worker.py
+       ↓
    PostgreSQL
        ↓
    events table
+       ↓
+Analytics API (games / players / levels)
+       ↓
+Redis cache (60s TTL)
+       ↓
+React Dashboard
 ```
 
 Currently implemented:
@@ -61,14 +69,20 @@ Currently implemented:
 - `questmetrix` database
 - `events` table
 - Pydantic event validation
-- `POST /events`
-- `GET /events`
+- `POST /events` (now publishes to the queue rather than writing directly — see §3.1 and §6.3)
+- `GET /events`, `GET /games`, `GET /players`, `GET /levels`
 - environment-based database configuration
 - manual API verification through FastAPI Swagger/OpenAPI documentation
-- Godot SDK for event submission
-- SDK error handling for unreachable backend
+- Godot SDK for event submission (`QuestMetrix.gd`, with error handling and its own README)
+- Session grouping (30-minute inactivity window) and a basic daily retention metric
+- React analytics dashboard (`dashboard/`): raw event table, summary stat cards, charts, loading/error states
+- Redis caching (60-second TTL on `GET /games`, with tested hit/expiry/invalidation behavior)
+- Redis Streams as the message queue between the API and the background worker
+- A background worker (`worker.py`) that consumes the queue and persists events to PostgreSQL, using structured `logging.info()` calls (captured by `docker logs`)
+- Full Docker Compose containerization: FastAPI, PostgreSQL (with a persistent volume), Redis, and the worker all run and communicate via internal service names, brought up with a single `docker-compose up -d --build`
+- A restructured automated test suite (`unit/`, `integration/`, `e2e/`) run through a dedicated `test-runner` Docker Compose service/profile
 
-The asynchronous processing, analytics layer, dashboard, Redis, authentication, rate limiting, monitoring, and other production-oriented components are planned rather than implemented.
+Authentication, rate limiting, WebSockets, session/replay visualization, CI/CD, load testing, and full monitoring/alerting are still planned rather than implemented.
 
 ---
 
@@ -119,49 +133,49 @@ The project should not adopt complex infrastructure before the simpler version i
 - The SDK handles connection errors gracefully without crashing the game.
 - The SDK is documented with a `README.md`.
 
-#### Analytics Layer
+#### Milestone 3 — Analytics Layer
 
-Raw events will be transformed into useful metrics, for example:
+- SQL aggregations exposed via `GET /games` and `GET /players`.
+- `GET /levels` for completion rate, average deaths, and average completion time per level.
+- Session grouping using a 30-minute inactivity window.
+- A basic daily retention metric (whether a player returned on a later calendar day).
+- Realistic multi-player/multi-level mock telemetry generated to validate the aggregations against non-trivial data.
+- Backend refactored into `main.py`, `events.py`, `analytics.py`, and `database.py` to keep the growing endpoint surface organized.
 
-- event counts
-- player counts
-- level completion rates
-- death rates
-- player progression
-- session statistics
-- retention
+#### Milestone 4 — Dashboard
 
-#### Dashboard
+- A React application in `dashboard/` that connects to the FastAPI backend.
+- A raw event table, summary statistic cards, and charts (events over time, level completion rates).
+- Loading and error states are handled in the UI rather than showing a blank screen.
 
-A React dashboard will visualize analytics through:
+#### Milestone 5 — Scalable Infrastructure (in progress)
 
-- summary metrics
-- tables
-- charts
-- level difficulty information
-- player/session views
-- real-time updates where appropriate
+Completed so far:
 
-#### Scalable Infrastructure
+- Redis installed and connected; `GET /games` cached for 60 seconds, with cache hit/expiry/manual-invalidation behavior tested.
+- The full stack (FastAPI, PostgreSQL with a persistent volume, Redis) containerized and orchestrated with Docker Compose, communicating via internal service names, and runnable end-to-end with one command.
+- A message queue implemented using Redis Streams (see §4.2 for the decision update — this superseded the earlier RabbitMQ candidate).
+- `POST /events` changed to publish to the queue instead of writing directly to PostgreSQL.
+- A background worker (`worker.py`) that consumes the queue and writes to PostgreSQL, with `logging.info()` output captured by `docker logs`.
+- An expanded, restructured automated test suite (`unit/`, `integration/`, `e2e/`) with a dedicated `test-runner` Docker Compose service — originally scoped for Phase 7, pulled forward because the async pipeline needed a reliable way to verify it.
 
-The target architecture may introduce:
+Still open (Milestone 5, Week 4):
 
-- Redis
-- Docker
+- Rate limiting on `POST /events`.
+- API key authentication.
+- Confirming no events are lost if the worker restarts mid-processing.
+- Wiring the worker to update/invalidate Redis cache entries after a successful write (currently the cache and the queue/worker path aren't yet connected to each other).
 
 ### 2.3 Planned Scope
 
-#### Scalable Infrastructure
+#### Scalable Infrastructure (remaining)
 
-The target architecture may introduce:
-
-- a message queue
-- background workers
-- rate limiting
+- Rate limiting
 - API authentication
+- Worker ↔ cache integration and restart-safety verification (see Milestone 5 above)
 - WebSockets
 - CI/CD
-- monitoring and alerting
+- Full monitoring and alerting (structured JSON logging currently exists only in `worker.py`, via plain `logging.info()` calls — not yet the structured format described in §9.1)
 
 #### Advanced Session / Replay Analysis
 
@@ -209,29 +223,48 @@ The project is also not intended to become a full commercial-scale analytics ser
 
 ### 3.1 Current Architecture
 
-The current architecture is a simple backend service with a Godot SDK client.
+As of Milestone 5 (in progress), the architecture is a decoupled, asynchronous pipeline — not the direct-write design described in earlier revisions of this document:
 
 ```text
-Godot SDK
-    │
-    ▼
-Client
-(Swagger / manual JSON)
+Godot SDK / Client (Swagger / manual JSON)
         │
         ▼
      FastAPI
         │
         │ Pydantic validation
         ▼
+  Redis Streams (queue)
+        │
+        ▼
+    worker.py
+        │
+        ▼
    PostgreSQL
         │
         ▼
 questmetrix.events
+        │
+        ▼
+Analytics API (games / players / levels)
+        │
+        ▼
+  Redis (60s cache on /games)
+        │
+        ▼
+  React Dashboard
 ```
 
-The current API directly persists validated events to PostgreSQL.
+`POST /events` no longer writes to PostgreSQL directly — it publishes the validated event onto a Redis Stream, and a separate background worker (`worker.py`) consumes that stream and performs the actual database write, logging its activity via `logging.info()` rather than `print()` so it's visible through `docker logs`. The entire stack (FastAPI, PostgreSQL with a persistent volume, Redis, and the worker) runs under Docker Compose and communicates via internal service names.
 
-This simple architecture is intentional. It provides a stable baseline before asynchronous processing is introduced.
+**Not yet wired:** the worker does not yet update or invalidate Redis cache entries after a successful write, and there is no confirmed guarantee yet that an in-flight event survives a worker restart without being lost or duplicated — both are open items for Milestone 5, Week 4.
+
+For reference, the original Milestone 1–2 baseline (before the queue existed) was a direct write:
+
+```text
+Godot SDK / Client → FastAPI → Pydantic validation → PostgreSQL → questmetrix.events
+```
+
+That simpler design was intentional at the time — a stable baseline to validate before asynchronous processing was introduced.
 
 ### 3.2 Target Architecture
 
@@ -270,6 +303,8 @@ The message queue separates event ingestion from downstream processing. Workers 
 
 Redis will be considered for frequently accessed analytics, session lookups, and other data where low-latency access provides a measurable benefit.
 
+**Status update:** the SDK, Event API, Message Queue, Processing Worker, PostgreSQL, Redis (caching), and Analytics API Layer boxes above are now implemented (see §3.1). The remaining gap between this diagram and reality is narrower than it was at v0.2: WebSocket delivery to the dashboard is still not built, and the pipeline isn't yet gated by authentication or rate limiting.
+
 ### 3.3 Architectural Principle
 
 Each target component will be introduced only after the preceding component is functional and understood.
@@ -279,36 +314,39 @@ This avoids a "big bang" implementation and makes failures easier to isolate.
 ### 3.4 Current-to-Target Migration Path
 
 ```text
-Milestone 1 & 2
+Milestone 1 & 2 ✅ Complete
 Godot SDK → FastAPI → PostgreSQL
 
         ↓
 
-Milestone 3
-Events → Analytics processing → PostgreSQL
+Milestone 3 ✅ Complete
+Events → Analytics processing (games/players/levels, sessions, retention) → PostgreSQL
 
         ↓
 
-Milestone 4
+Milestone 4 ✅ Complete
 Analytics API → React Dashboard
 
         ↓
 
-Milestone 5
-API → Message Queue → Workers → PostgreSQL
+Milestone 5 🔄 In progress
+Redis caching → Docker containerization → Redis Streams queue → Worker → PostgreSQL
+(remaining: rate limiting, API authentication, worker↔cache integration)
 
         ↓
 
-Milestone 6
-Redis + WebSockets + advanced analytics
+Milestone 6 ⏳ Planned
+WebSockets + session/replay analysis
 
         ↓
 
-Milestone 7
-Testing + observability + Docker + CI/CD + load testing
+Milestone 7 ⏳ Planned
+CI/CD + full observability + load testing
+(automated tests and Docker support were pulled forward into Milestone 5 —
+see §2.2 — because the async pipeline needed them earlier than originally scoped)
 ```
 
-### 3.5 Sequence Flow — Target Event Ingestion
+### 3.5 Sequence Flow — Event Ingestion
 
 ```text
 Game
@@ -319,27 +357,28 @@ SDK
   │
   │ HTTP POST /events
   ▼
-API
+API                                          ✅ implemented
   │
   │ validate payload
   ▼
-Message Queue
+Message Queue (Redis Streams)                ✅ implemented
   │
   │ acknowledge / persist message
   ▼
-Worker
+Worker (worker.py)                           ✅ implemented
   │
-  │ process event
+  │ process event, write to PostgreSQL
   ▼
 PostgreSQL
   │
-  ├────────► Redis/cache
+  ├────────► Redis/cache                     ⏳ not yet wired (worker doesn't
+  │                                              update the cache after a write)
+  ▼
+Analytics API                                ✅ implemented (games/players/levels)
   │
   ▼
-Analytics API
-  │
-  ▼
-Dashboard
+Dashboard                                    ✅ implemented (polls the API;
+                                                 no live push yet — see §3.2)
 ```
 
 ---
@@ -363,16 +402,21 @@ Dashboard
 | Dashboard         | React                        | Analytics UI                      | Provides a component-based frontend for data visualization                                                                        |
 | Cache             | Redis                        | Fast-access data                  | Redis is used as its in-memory data structures are suitable for frequently accessed metrics, session lookups, and real-time views |
 | Containerization  | Docker                       | Reproducible deployment           | Makes development and deployment environments consistent, so the full stack can be launched with a single command                 |
+| Message queue     | Redis Streams                | Asynchronous event delivery       | See "Decision update" below                                                                                                        |
+| Workers           | Python background worker (`worker.py`) | Event processing        | Decouples ingestion from persistence; consumes the Redis Stream and writes to PostgreSQL                                          |
+| Testing tooling   | pytest + Docker Compose `test-runner` | Automated testing        | Runs `unit/`, `integration/`, and `e2e/` suites in a consistent containerized environment                                          |
+
+**Decision update — message queue:** v0.2 of this document listed RabbitMQ as the preferred candidate. In implementation, **Redis Streams** was chosen instead, since Redis was already deployed for caching — this avoided introducing a second piece of infrastructure to run and operate. RabbitMQ remains worth revisiting later if Redis Streams becomes a limiting factor.
 
 ### 4.2 Planned
 
 | Component         | Technology                            | Role                        | Decision / Rationale                                                                                                                                                                                                             |
 | ----------------- | ------------------------------------- | --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Message queue     | RabbitMQ (candidate)                  | Asynchronous event delivery | RabbitMQ is currently the preferred candidate because it provides queues, acknowledgements, retries, and dead-lettering without requiring the operational complexity of a large event-streaming platform at this project's scale |
-| Workers           | Python background workers             | Event processing            | Decouples ingestion from processing                                                                                                                                                                                              |
+| Authentication    | API keys (`game_id` ↔ key mapping)    | Restrict who can call the API | Simplest model that scopes access per game without full OAuth complexity                                                                                                                                                        |
+| Rate limiting     | Middleware-based (library TBD)        | Prevent API abuse           | Needed before the API is exposed anywhere beyond localhost                                                                                                                                                                        |
 | Real-time updates | WebSockets                            | Live dashboard updates      | Allows the server to push relevant changes without polling                                                                                                                                                                       |
 | CI/CD             | GitHub Actions or similar             | Automated workflow          | Automates testing and deployment checks                                                                                                                                                                                          |
-| Testing           | pytest + integration/E2E/load tooling | Quality assurance           | Supports unit, integration, end-to-end, and performance testing                                                                                                                                                                  |
+| Load testing      | Locust or k6 (candidate)              | Performance validation      | The `unit`/`integration`/`e2e` suite now exists (see above); load testing and CI integration are the remaining testing gaps                                                                                                     |
 
 **Technology decisions marked as candidate/planned are not final until the corresponding milestone is implemented and evaluated.**
 
@@ -420,14 +464,16 @@ The current sample event is:
 | Event Type             | Status                   | Purpose                       | Example Additional Data          |
 | ---------------------- | ------------------------ | ----------------------------- | -------------------------------- |
 | `enemy_killed`         | Implemented              | Records an enemy defeat       | enemy ID/type may be added later |
-| `level_completed`      | Planned/used for testing | Records completion of a level | completion time, score           |
+| `level_completed`      | Implemented (analytics)  | Records completion of a level; drives `GET /levels` completion-rate and avg-completion-time stats | completion time, score |
 | `player_started_level` | Planned                  | Records level start           | level ID                         |
-| `player_died`          | Planned                  | Records player death          | cause/enemy ID                   |
+| `player_died`          | Implemented (analytics)  | Records player death; drives `GET /levels` death-rate stats | cause/enemy ID  |
 | `item_collected`       | Planned                  | Records item collection       | item ID/type                     |
 | `dialogue_selected`    | Planned                  | Records dialogue choice       | dialogue/node ID                 |
 | `player_quit`          | Planned                  | Records a player leaving      | session ID/reason                |
 
 The event registry must be updated whenever a new supported event type is added.
+
+**Note on "Implemented (analytics)":** `level_completed` and `player_died` are consumed by the analytics layer and validated against generated mock telemetry; it is not yet confirmed in project documentation whether the live Godot SDK test game emits these itself (only `enemy_killed` is confirmed SDK-emitted). Verify against `sdk/QuestMetrix.gd` before treating SDK emission as complete.
 
 ### 5.4 Database Table — Implemented
 
@@ -558,13 +604,13 @@ Example:
 }
 ```
 
-**Current success status:**
+**Superseded behavior (Milestones 1–4, before the queue existed):**
 
 ```text
 HTTP 200 OK
 ```
 
-The current implementation does not explicitly set `201 Created`, so the observed success response is `200 OK`.
+The event was written directly to PostgreSQL and echoed back in the response body:
 
 ```json
 {
@@ -578,6 +624,11 @@ The current implementation does not explicitly set `201 Created`, so the observe
   }
 }
 ```
+
+**Current behavior (Milestone 5+):** `POST /events` now publishes the validated event onto the Redis Streams queue rather than writing to PostgreSQL synchronously (see §3.1). The actual persistence happens afterward, asynchronously, in `worker.py`. This means:
+
+- The response can no longer honestly claim "stored" at the moment it's returned — only "accepted and queued."
+- The exact current status code and response body have not been reconfirmed against the running implementation since this change; the response most likely now represents an acknowledgment-of-queued semantic (commonly `202 Accepted`) rather than the "stored successfully" body above. **Action item:** verify the actual response against the current `POST /events` route handler and update this section with the confirmed contract — don't treat the block above as current until it's checked.
 
 **Current validation error:**
 
@@ -661,7 +712,7 @@ Example:
 }
 ```
 
-**Current behaviour:** all stored events are returned.
+**Current behaviour:** all stored events are returned. Because writes are now asynchronous (queued, then processed by `worker.py`), an event may not appear immediately after `POST /events` returns — there can be a short propagation delay between "accepted" and "queryable."
 
 **Future improvements:**
 
@@ -673,15 +724,23 @@ Example:
 - authentication
 - rate limiting
 
-### 6.5 Planned Endpoints
+### 6.5 Implemented Analytics Endpoints (Milestone 3)
 
-| Method      | Endpoint       | Purpose                            |
-| ----------- | -------------- | ---------------------------------- |
-| `GET`       | `/games`       | Game-level aggregated statistics   |
-| `GET`       | `/players`     | Player-level aggregated statistics |
-| `GET`       | `/sessions`    | Session-grouped events             |
-| `GET`       | `/analytics/*` | Specific analytics metrics         |
-| `WEBSOCKET` | `/ws`          | Real-time event/dashboard updates  |
+| Method | Endpoint   | Purpose                                                             | Status      |
+| ------ | ---------- | -------------------------------------------------------------------- | ----------- |
+| `GET`  | `/games`   | Game-level aggregated statistics; cached for 60 seconds               | Implemented |
+| `GET`  | `/players` | Player-level aggregated statistics                                   | Implemented |
+| `GET`  | `/levels`  | Level completion rate, average deaths, and average completion time   | Implemented |
+
+**Note:** these are implemented and live in `analytics.py`, but full request/response contracts (in the format used for `POST`/`GET /events` above) haven't been documented here yet — add them the next time this section is reviewed (§15). Session grouping and the daily retention metric are also implemented (§2.2), but it's unconfirmed whether they're exposed via a dedicated endpoint (e.g. `/sessions`) or used only internally — verify against `analytics.py` before documenting a contract for it.
+
+### 6.6 Planned Endpoints
+
+| Method      | Endpoint | Purpose                           |
+| ----------- | -------- | ---------------------------------- |
+| `WEBSOCKET` | `/ws`    | Real-time event/dashboard updates |
+
+Rate limiting and API-key authentication (Milestone 5, Week 4) will apply to all endpoints above once implemented — see §10.
 
 ---
 
@@ -727,7 +786,7 @@ Attempt 3
 Dead-letter queue
 ```
 
-The exact retry count and delays will be defined when the message queue is implemented.
+The message queue and worker are now implemented (§3.1, §4.1), but this retry/backoff policy and the dead-letter queue itself are not yet built — `worker.py` currently processes messages without confirmed retry logic. The exact retry count and delays are still to be defined.
 
 ---
 
@@ -789,16 +848,24 @@ Dashboard
 
 ### 8.4 Test Organization
 
-Tests should be grouped logically:
+As of Milestone 5, tests are grouped as follows (this part is implemented, not just planned):
 
 ```text
 tests/
 ├── unit/
 ├── integration/
 ├── e2e/
-├── fixtures/
-└── performance/
+├── fixtures/        (aspirational — not confirmed yet)
+└── performance/     (aspirational — Phase 7, load testing)
 ```
+
+Integration and end-to-end tests run through a dedicated Docker Compose service:
+
+```bash
+docker compose --profile test up --build test-runner
+```
+
+This launches a `test-runner` container that executes the integration/e2e suites against the containerized stack and exits — giving a consistent environment rather than depending on whatever's installed locally.
 
 ### 8.5 Test Case Format
 
@@ -849,15 +916,14 @@ Slow tests should be identified and optimized or moved to an appropriate test st
 
 ### 8.9 Current Test Status
 
-Milestone 1 has been manually verified using:
+Milestone 1 was originally manually verified using FastAPI Swagger/OpenAPI, `POST`/`GET /events`, and direct PostgreSQL queries — this manual process was also the primary verification method through Milestone 2 (Godot end-to-end testing effectively replaced manual Swagger calls at that point).
 
-1. FastAPI Swagger/OpenAPI.
-2. `POST /events`.
-3. `GET /events`.
-4. PostgreSQL `SELECT * FROM events`.
-5. Multiple event submissions.
+As of Milestone 5, this has changed: the backend test suite has been restructured into `unit`, `integration`, and `e2e` layers and is run automatically through the `test-runner` Docker Compose service (§8.4) rather than purely by hand.
 
-Automated tests are not yet implemented.
+**Still open:**
+- CI integration (tests run automatically on push) — Phase 7.
+- Coverage tracking/reporting (`pytest-cov`) — not yet wired in.
+- A specific test confirming no events are lost or duplicated if the worker restarts mid-processing — this is an explicitly open item on the current milestone's checklist, not yet covered by an automated test.
 
 ---
 
@@ -887,6 +953,8 @@ Logs must not contain:
 - API secrets
 - authentication tokens
 - unnecessary sensitive player information
+
+**Progress note:** as of Milestone 5, `worker.py` uses Python's `logging` module (`logging.info()`) instead of `print()`, so its output is captured by `docker logs`. This is a first step toward the target above, not the target itself — current worker logs are plain-text `logging.info()` calls, not yet the structured JSON format with the fields listed. The API itself does not yet have equivalent structured logging.
 
 ### 9.2 Monitoring Metrics
 
@@ -1045,7 +1113,7 @@ Future CI should include:
 
 ### 11.1 Current Performance Scope
 
-The current implementation is a development-scale synchronous API.
+The current implementation is a development-scale API with an asynchronous write path (`POST /events` → Redis Streams → `worker.py` → PostgreSQL, as of Milestone 5 — see §3.1) but no load or throughput testing has been performed against it yet.
 
 No production throughput claim is currently made.
 
@@ -1069,22 +1137,25 @@ The project should measure:
 The current path is:
 
 ```text
-Synchronous API
+Synchronous API              ✅ done (Milestones 1–4)
       ↓
-Direct database write
+Direct database write        ✅ done, then replaced (see below)
       ↓
-Measure bottlenecks
+Measure bottlenecks          ⚠️ not formally measured — queue was introduced
+      ↓                          proactively rather than in response to a
+      ↓                          measured bottleneck
+Introduce queue               ✅ done (Redis Streams, Milestone 5)
       ↓
-Introduce queue
+Scale workers                 ⏳ one worker instance currently; not yet scaled
       ↓
-Scale workers
+Introduce caching where justified   ✅ done (GET /games, 60s TTL)
       ↓
-Introduce caching where justified
+Load test                     ⏳ not started (Phase 7)
       ↓
-Load test
-      ↓
-Optimize
+Optimize                      ⏳ not started
 ```
+
+Note the order actually followed diverged slightly from the plan: the queue and cache were introduced as part of Milestone 5's planned scope rather than strictly in response to a measured bottleneck. That's a reasonable call for a learning project, but worth being honest about if this section is ever used to describe the project's engineering process.
 
 ### 11.4 Caching
 
@@ -1209,13 +1280,18 @@ Before merging:
 
 ### 12.5 Deployment
 
-Development:
+Development (current, as of Milestone 5):
 
 ```text
 Local machine
     ↓
-FastAPI + PostgreSQL
+docker-compose up -d --build
+    ↓
+FastAPI + PostgreSQL + Redis + worker
+    (dashboard run separately: npm run dev, in dashboard/)
 ```
+
+This replaces the earlier bare-venv local setup — the full backend stack now starts with a single command, with services communicating over Docker's internal network rather than `localhost`.
 
 Future deployment:
 
@@ -1252,8 +1328,8 @@ Database migrations must be designed carefully because application rollback does
 | Session heuristics                  | A session has no universally correct definition                  | Start with a documented time-based heuristic and validate it against data               |
 | CORS                                | React and API may run on different origins                       | Configure explicit allowed origins; avoid permissive production CORS                    |
 | Scope creep                         | New features can derail the current milestone                    | Maintain `docs/BACKLOG.md`; implement only current milestone scope                      |
-| Silent distributed failures         | Queue/worker failures may not be visible to users                | Structured logs, queue monitoring, retries, dead-letter queues, alerts                  |
-| Duplicate events                    | Retries may cause the same event to be processed more than once  | Introduce event IDs/idempotency strategy before asynchronous retries are enabled        |
+| Silent distributed failures         | Queue/worker failures may not be visible to users                | Structured logs, queue monitoring, retries, dead-letter queues, alerts. **Status: now live** — the queue and worker exist as of Milestone 5, but worker-restart resilience hasn't been verified yet (open checklist item) and there's no dead-letter queue or alerting in place. |
+| Duplicate events                    | Retries may cause the same event to be processed more than once  | Introduce event IDs/idempotency strategy before asynchronous retries are enabled. **Status: now live** — the worker exists and is consuming the queue; no idempotency strategy has been confirmed yet, so this should be checked before relying on the pipeline being duplicate-safe. |
 | Database bottleneck                 | Direct writes may become the ingestion bottleneck                | Measure throughput, then introduce queue/workers and appropriate indexing               |
 | Cache inconsistency                 | Cached analytics can become stale                                | Define TTL/invalidation policy and treat PostgreSQL as the source of truth              |
 | Credential leakage                  | Database/API secrets may enter Git                               | `.env` in `.gitignore`, secret scanning, deployment secret management                   |
@@ -1311,7 +1387,35 @@ Milestone 1 checklist:
 - [x] Multiple events can be stored and retrieved
 - [x] Manual API verification completed
 
-Automated tests are not yet part of the completed milestone.
+Automated tests were not yet part of the completed milestone at the time — see §8.9 for current test status.
+
+Milestone 2 checklist (Godot SDK Integration):
+
+- [x] A Godot test project can call `QuestMetrix.track("enemy_killed")`
+- [x] The event appears in PostgreSQL without touching Swagger
+- [x] SDK handles a dropped connection without crashing the game
+- [x] SDK usage documented
+
+Milestone 3 checklist (Analytics Layer):
+
+- [x] `GET /games`, `GET /players` return real aggregates
+- [x] Level-level stats (completion rate, deaths, avg time) work
+- [x] Sessions can be identified from raw events
+- [x] A basic retention number can be computed
+
+Milestone 4 checklist (Analytics Dashboard):
+
+- [x] Dashboard runs and fetches live data from FastAPI
+- [x] Raw events, summary stats, and charts are visible
+- [x] Loading/error states are handled
+
+Milestone 5 checklist (Scalable Infrastructure) — in progress:
+
+- [x] Events flow through a queue + worker, not a direct insert
+- [x] At least one endpoint is cache-backed with correct invalidation (`GET /games`)
+- [ ] `POST /events` requires a valid API key
+- [ ] Basic rate limiting rejects excessive requests
+- [ ] No events are lost or duplicated if the worker restarts mid-processing (unverified)
 
 ---
 
@@ -1411,23 +1515,55 @@ Immediately remove it from tracking and rotate the exposed credentials if it con
 
 Never commit passwords.
 
+### Docker Desktop / WSL fails to start on Windows ("Windows timed out" errors)
+
+This was encountered during initial Docker setup (Milestone 5) and took roughly two nights to resolve — logged here so it doesn't have to be re-diagnosed from scratch next time.
+
+Likely cause: WSL and/or Windows Update corruption interfering with Docker Desktop's WSL2 backend.
+
+Starting points if this recurs:
+
+```powershell
+wsl --shutdown
+wsl --update
+```
+
+- Check Windows Update history for recent updates around the time the issue started.
+- Confirm WSL2 (not the legacy Hyper-V backend) is selected in Docker Desktop settings.
+- As a last resort, an unregister/reinstall of the WSL distro used by Docker Desktop may be needed.
+
+### `worker.py` doesn't seem to process events
+
+Check:
+
+- Is the `worker` service actually running? (`docker compose ps`)
+- Check its logs: `docker logs <worker-container-name>` — it now uses `logging.info()`, so activity should be visible there.
+- Confirm the Redis Stream name/consumer group the worker is reading from matches what `POST /events` is publishing to.
+- Confirm Redis itself is reachable from the worker container (internal service name, not `localhost`).
+
 ---
 
 ## 17. Deployment Guide
 
 ### Current Development Environment
 
-The current system runs locally:
+As of Milestone 5, the system runs locally via Docker Compose rather than a bare Python virtual environment:
 
 ```text
 Windows
   ↓
-Python virtual environment
+Docker Desktop (WSL2 backend)
   ↓
-FastAPI
+docker-compose up -d --build
   ↓
-Local PostgreSQL 18
+FastAPI + PostgreSQL (persistent volume) + Redis + worker
+  ↓
+Dashboard (run separately: npm run dev, in dashboard/)
 ```
+
+Required `.env` values (see `README.md` for the full example): `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `REDIS_HOST`, `REDIS_PORT`. Note that `DB_HOST`/`REDIS_HOST` are Docker service names (e.g. `db`, `redis`), not `localhost`, since services communicate over Docker's internal network.
+
+The earlier bare-venv setup (Python virtual environment + local PostgreSQL install, no Docker) was the Milestone 1–4 baseline and is superseded by the above.
 
 ### Future Deployment Requirements
 
@@ -1436,17 +1572,17 @@ Before deployment, the project should have:
 - environment-specific configuration
 - managed secrets
 - HTTPS/TLS
-- authentication
-- rate limiting
+- authentication *(not yet — Milestone 5, Week 4)*
+- rate limiting *(not yet — Milestone 5, Week 4)*
 - database migrations
 - health checks
-- structured logging
+- structured logging *(partial — `worker.py` has basic logging; API doesn't yet; full structured JSON format still pending, §9.1)*
 - monitoring
-- automated tests
+- automated tests *(partial — unit/integration/e2e suite exists and runs via `test-runner`; CI integration and coverage tracking still pending, §8.9)*
 - backup strategy
 - rollback procedure
 
-The exact hosting provider is not yet selected.
+The exact hosting provider is not yet selected. Local reproducibility via Docker Compose is complete, which is a meaningful step toward any of the above hosting targets.
 
 ---
 
@@ -1457,7 +1593,7 @@ For the current solo project:
 1. Work from `dev` or a feature branch.
 2. Keep changes scoped to one logical feature.
 3. Do not commit `.env`, credentials, or `venv/`.
-4. Add/update tests for meaningful logic.
+4. Add/update tests for meaningful logic, and run `docker compose --profile test up --build test-runner` before merging (CI doesn't run this automatically yet — see §8.9).
 5. Update documentation when behaviour changes.
 6. Use clear commit messages.
 7. Do not close a milestone until its Definition of Done is satisfied.
@@ -1467,6 +1603,24 @@ Future external contributors should also follow the project's issue, pull-reques
 ---
 
 ## 19. Change Log
+
+### v0.3 — 24 Aug 2026
+
+Updated the TDD against `README.md`, `devlog.md`, and `QM_Roadmap.md` to reflect actual progress since v0.2:
+
+- Marked Milestone 3 (Analytics) and Milestone 4 (Dashboard) complete throughout §1, §2, §3.4, and §14.
+- Rewrote the current architecture (§3.1) and the ingestion sequence flow (§3.5) to show the queue + worker as implemented, not target — `POST /events` now publishes to Redis Streams instead of writing to PostgreSQL directly.
+- Corrected the message-queue technology decision: Redis Streams was implemented, superseding the earlier RabbitMQ candidate (§4.1–4.2).
+- Moved background workers and message queue from "Planned" to "Currently Used" in the technology stack; added a testing-tooling row.
+- Marked `level_completed` and `player_died` as implemented in the event dictionary (§5.3), with a note on unconfirmed SDK emission.
+- Flagged `POST /events`'s response contract as changed but unverified against the current implementation (§6.3), and noted the read-after-write propagation delay this introduces (§6.4).
+- Added the three implemented analytics endpoints (`/games`, `/players`, `/levels`) and trimmed the planned-endpoints list to just `/ws` (§6.5–6.6).
+- Updated testing status (§8.4, §8.9): the unit/integration/e2e suite and `test-runner` Docker service are now real, not aspirational.
+- Noted the initial logging step taken in `worker.py` (§9.1).
+- Updated local deployment instructions to Docker Compose in both §12.5 and §17.1, replacing the earlier bare-venv description.
+- Added Milestone 2–5 Definition of Done checklists (§14), matching what's already tracked in `docs/ROADMAP.md`.
+- Added two real troubleshooting entries from this period: the WSL/Docker Windows Update issue, and a worker-not-processing checklist (§16).
+- Flagged the duplicate-events and silent-failure risks (§13) as now live concerns rather than hypothetical, since the queue/worker exist but haven't been verified restart-safe.
 
 ### v0.2 — 11 Aug 2026
 
@@ -1546,6 +1700,9 @@ Initial TDD covering:
 | Session           | A logical period of player activity grouped according to a defined rule                                 |
 | Retention         | Measurement of whether users return after an initial period                                             |
 | Replay            | Ordered representation of a player's sequence of gameplay events                                        |
+| Redis Streams     | Redis's built-in log/queue data structure; used here as the message queue between the API and the worker |
+| Docker Compose profile | A named group of services (e.g. `test`) that only start when explicitly requested, keeping optional services like `test-runner` out of the default `docker-compose up` |
+| WSL               | Windows Subsystem for Linux; the backend Docker Desktop uses to run Linux containers on Windows          |
 
 ---
 
@@ -1554,12 +1711,12 @@ Initial TDD covering:
 | #   | Milestone             | Deliverable                                                  | Status   |
 | --- | --------------------- | ------------------------------------------------------------ | -------- |
 | 1   | Foundation            | FastAPI + PostgreSQL + `POST`/`GET /events`                  | Complete |
-| 2   | Game Integration      | Godot SDK and real game → API event flow                     | Next     |
-| 3   | Analytics             | Player/level/session statistics                              | Planned  |
-| 4   | Dashboard             | React analytics dashboard                                    | Planned  |
-| 5   | Scalability           | Redis, message queue, workers, rate limiting, authentication | Planned  |
+| 2   | Game Integration      | Godot SDK and real game → API event flow                     | Complete |
+| 3   | Analytics             | Player/level/session statistics                              | Complete |
+| 4   | Dashboard             | React analytics dashboard                                    | Complete |
+| 5   | Scalability           | Redis, message queue, workers, rate limiting, authentication | WIP      |
 | 6   | Real-Time / Advanced  | WebSockets + session/replay visualization                    | Planned  |
-| 7   | Engineering Hardening | Tests, logging, Docker, CI/CD, load testing                  | Planned  |
+| 7   | Engineering Hardening | CI integration for tests, full structured logging, CI/CD, load testing (Docker and an initial unit/integration/e2e suite were pulled forward into Milestone 5) | Planned  |
 
 A detailed task breakdown should be maintained separately in:
 
@@ -1571,16 +1728,20 @@ docs/ROADMAP.md
 
 ## 22. Current System Mental Model
 
-The most important current data flow is:
+The most important current data flow — the write path — is:
 
 ```text
-Manual JSON
+Godot Game / Manual JSON
     ↓
 POST /events
     ↓
 FastAPI
     ↓
 Pydantic validation
+    ↓
+Redis Streams (queue)
+    ↓
+worker.py
     ↓
 psycopg2
     ↓
@@ -1589,7 +1750,7 @@ PostgreSQL
 events table
 ```
 
-The retrieval path is:
+The raw-event retrieval path is:
 
 ```text
 events table
@@ -1605,38 +1766,54 @@ GET /events
 JSON response
 ```
 
-The next major transformation is:
+The analytics retrieval path is:
 
 ```text
-Godot Game
+events table
     ↓
-QuestMetrix SDK
-    ↓
-POST /events
+PostgreSQL (aggregation queries in analytics.py)
     ↓
 FastAPI
     ↓
-PostgreSQL
+GET /games (60s Redis cache) · GET /players · GET /levels
+    ↓
+React Dashboard
 ```
 
-The eventual target is:
+**What's not yet wired end-to-end:** the worker does not update or invalidate the Redis cache after a write, so the queue/worker path and the cache path are currently independent of each other. There's also no confirmed guarantee that an event survives a worker restart without being lost or processed twice.
+
+The eventual target — largely achieved as of this revision, with the gaps noted below — was:
 
 ```text
 Game
  ↓
-SDK
+SDK                          ✅
  ↓
-API
+API                          ✅
  ↓
-Queue
+Queue                        ✅
  ↓
-Workers
+Workers                      ✅
  ↓
-PostgreSQL + Redis
+PostgreSQL + Redis           ✅ (cache exists; worker↔cache link does not — see above)
  ↓
-Analytics API
+Analytics API                ✅
  ↓
-React Dashboard
+React Dashboard              ✅ (polling only — no live push yet)
+```
+
+The next real transformation (Milestone 5 Week 4 → Milestone 6) is:
+
+```text
+Unauthenticated, unthrottled API
+    ↓
++ API key authentication
+    ↓
++ Rate limiting
+    ↓
++ WebSocket broadcast to dashboard
+    ↓
++ Session/replay timeline view
 ```
 
 ---
