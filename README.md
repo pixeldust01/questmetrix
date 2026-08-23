@@ -39,13 +39,13 @@ Game -> QuestMetrix SDK -> Event API -> Message Queue -> Processing Engine -> Po
 
 ### Current Implementation
 
-The current system implements the initial backend pipeline:
+The current system implements a decoupled, asynchronous pipeline:
 
-Godot SDK -> FastAPI -> PostgreSQL -> events table
+Godot SDK -> FastAPI -> Redis (Queue) -> Worker -> PostgreSQL
 
-Currently, gameplay events can be submitted from a Godot game client,
-sent through the API, and stored in PostgreSQL. Stored events can
-also be retrieved through the API.
+Events are ingested by the API, pushed to a Redis Stream, and processed
+asynchronously by a background worker that writes to the database. This
+improves ingestion speed and resilience.
 
 ## Tech Stack
 
@@ -74,80 +74,47 @@ also be retrieved through the API.
 
 ## Getting Started
 
+The entire QuestMetrix stack is managed by Docker Compose, allowing you to run the complete platform with a single command.
+
 ### Prerequisites
 
-Install the following:
+- Docker
+- Docker Compose
 
-- Python
-- PostgreSQL
-- Git
+### Running the Platform
 
-### Backend Setup
+1.  **Clone the repository:**
 
-Clone the repository:
+    ```bash
+    git clone <repository-url>
+    cd questmetrix
+    ```
 
-```bash
-git clone <repository-url>
-cd questmetrix
-```
+2.  **Environment Variables:**
+    Create a `.env` file in the project root. You can copy the example file if one exists, and update it with your PostgreSQL credentials.
 
-Create and activate a Python virtual environment:
+    ```env
+    # .env
+    DB_HOST=db
+    DB_PORT=5432
+    DB_NAME=questmetrix
+    DB_USER=postgres
+    DB_PASSWORD=your_postgresql_password
 
-```bash
-cd backend
-python -m venv venv
-venv\Scripts\activate
-```
+    REDIS_HOST=redis
+    REDIS_PORT=6379
+    ```
 
-Install the dependencies:
+3.  **Launch the Stack:**
 
-```bash
-pip install -r requirements.txt
-```
+    ```bash
+    docker-compose up -d --build
+    ```
 
-Create a `.env` file inside the `backend/` directory with your private PostgreSQL credentials:
-
-```env
-DB_HOST=localhost
-DB_PORT=5432
-DB_NAME=questmetrix
-DB_USER=postgres
-DB_PASSWORD=your_postgresql_password
-```
-
-Start the FastAPI server:
-
-```bash
-uvicorn main:app --reload
-```
-
-The API will be available at:
-
-```text
-http://127.0.0.1:8000
-```
-
-Interactive API documentation is available at:
-
-```text
-http://127.0.0.1:8000/docs
-```
-
-### Frontend Setup
-
-Install the dependencies from the dashboard directory `/dashboard`:
-
-```bash
-npm install
-```
-
-Start the Vite development server:
-
-```bash
-npm run dev
-```
-
-The dashboard is available at `http://localhost:5173`.
+    This command builds and starts the FastAPI backend, PostgreSQL, Redis, and the background worker.
+    - **API:** `http://localhost:8000`
+    - **API Docs:** `http://localhost:8000/docs`
+    - **Dashboard:** `http://localhost:5173` (run `npm install && npm run dev` in `dashboard/`)
 
 ### Godot Client Setup
 
@@ -236,29 +203,29 @@ For instructions on setting up the Godot test client, please refer to the SDK's 
 
 - [ ] Add automated tests
 - [ ] Add logging and monitoring
-- [ ] Add Docker support
+- [x] Add Docker support
 - [ ] Add CI/CD
 - [ ] Perform load testing
 - [ ] Document system architecture
 
 ## Testing
 
-Run automated backend tests have been added using this `pytest` command from directory `backend/`:
+The project includes a multi-layered testing suite organized into `unit`, `integration`, and `e2e` (end-to-end) tests. These are managed via a dedicated Docker service for consistency.
 
-```bash
-python -m pytest
-```
+### Running Tests
 
-Current test flow:
+- **Unit Tests:** Test individual components in isolation.
 
-1. Run the FastAPI backend server.
-2. Run the Godot test project.
-3. Trigger an event in the game to call `QuestMetrix.track()`.
-4. Verify that the API server logs a successful `POST /events` request.
-5. Verify that the event is stored correctly in the PostgreSQL `events` table.
-6. Optionally, use the `GET /events` endpoint to retrieve stored events and verify the data.
+  ```bash
+  # From the backend/ directory
+  python -m pytest tests/unit
+  ```
 
-Further unit, integration, and load tests will be added as the project develops.
+- **Integration & E2E Tests:** Verify the full data pipeline from API ingestion to database storage. These are run using a dedicated Docker Compose profile to ensure a consistent, containerized environment.
+  ```bash
+  docker-compose --profile test up --build test-runner
+  ```
+  This command launches a `test-runner` service that executes the integration and e2e suites and then exits.
 
 ## License
 

@@ -87,7 +87,6 @@ def run_worker():
 
         for _, stream_messages in messages:
             for message_id, event_data in stream_messages:
-
                 try:
                     store_event(event_data)
 
@@ -105,9 +104,6 @@ def run_worker():
                         f"{message_id}: {error}"
                     )
 
-if __name__ == "__main__":
-    run_worker()
-
 def recover_pending_messages():
     try:
         result = redis_client.xautoclaim(
@@ -122,6 +118,7 @@ def recover_pending_messages():
         messages = result[1]
 
         for message_id, event_data in messages:
+
             try:
                 store_event(event_data)
 
@@ -132,16 +129,20 @@ def recover_pending_messages():
                 )
 
                 logging.info(
-                    "Recovered pending event %s",
-                    message_id,
+                    f"Recovered pending event {message_id}"
                 )
 
-            except Exception:
-                logging.exception(
-                    "Failed to recover event %s",
-                    message_id,
+            except Exception as error:
+                logging.error(
+                    f"Failed to recover event "
+                    f"{message_id}: {error}"
                 )
 
     except Exception:
-        logging.exception("Failed to recover pending messages")
+        logging.exception(
+            "Failed to recover pending messages"
+        )
 
+
+if __name__ == "__main__":
+    run_worker()

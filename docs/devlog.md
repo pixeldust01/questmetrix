@@ -4,14 +4,14 @@ A chronological log of the project's development milestones.
 
 ### 23 August 2026
 
-- Added version numbers for PostGres and Redis in `docker-compose.yml`.
-- Introduced a message queue using Redis Streams, leveraging the existing Redis setup.
-- Changed `POST /events` to push to the queue instead of writing directly to PostgreSQL.
-- Completed Redis caching; next is adding a worker to connect PostgreSQL integrity checks with the Redis cache and stream.
+- Improved and expanded the suite of tests in `test-runner`. Restructured the backend testing suite into `unit`, `integration`, and `e2e` tests. A new `test-runner` Docker service now has a separate profile and runs integration/e2e tests, providing a flexible framework for verifying the entire pipeline. (docker compose --profile test up --build test-runner)
 - Created a `worker.py` to facilitate asynchronous path (SDK → API → queue → worker → DB), and implemented proper logging in it using `logging.info()` (instead of `print()`) to ensure output is captured by `docker logs`.
-- Restructured the backend testing suite into `unit`, `integration`, and `e2e` tests. A new `test-runner` Docker service now has a separate profile runs integration/e2e tests, providing a flexible framework for verifying the entire pipeline. (docker compose --profile test up --build test-runner)
+- Added version numbers for PostGres and Redis in `docker-compose.yml`.
+- Changed `POST /events` to push to the queue instead of writing directly to PostgreSQL.
+- Introduced a message queue using Redis Streams, leveraging the existing Redis setup.
+- Completed Redis caching; next is adding a worker to connect PostgreSQL integrity checks with the Redis cache and stream.
 
-  **Next Steps:**
+  **Next Steps:** M5W3 finished, next up is week 4.
 
 ### 21 August 2026
 
