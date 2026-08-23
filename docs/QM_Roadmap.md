@@ -183,7 +183,7 @@ Already done as of 11 Aug 2026. For the record, this is what "done" looked like 
 
 ### Week 3 — Deadline: Sun 08 Nov 2026
 
-- [ ] Build a background worker process that reads from the queue and writes to PostgreSQL
+- [x] Build a background worker process that reads from the queue and writes to PostgreSQL
 - [ ] Test the full async path: SDK → API → queue → worker → DB, and confirm no events are lost if the worker briefly restarts
 
 ### Week 4 — Deadline: Sun 15 Nov 2026

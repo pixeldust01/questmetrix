@@ -4,14 +4,14 @@ A chronological log of the project's development milestones.
 
 ### 23 August 2026
 
+- Added version numbers for PostGres and Redis in `docker-compose.yml`.
 - Introduced a message queue using Redis Streams, leveraging the existing Redis setup.
 - Changed `POST /events` to push to the queue instead of writing directly to PostgreSQL.
 - Completed Redis caching; next is adding a worker to connect PostgreSQL integrity checks with the Redis cache and stream.
-- Organized the backend testing suite for unit, integration and end-to-end tests, and created initial database and analytics integration tests.
+- Created a `worker.py` to facilitate asynchronous path (SDK → API → queue → worker → DB), and implemented proper logging in it using `logging.info()` (instead of `print()`) to ensure output is captured by `docker logs`.
+- Restructured the backend testing suite into `unit`, `integration`, and `e2e` tests. A new `test-runner` Docker service now has a separate profile runs integration/e2e tests, providing a flexible framework for verifying the entire pipeline. (docker compose --profile test up --build test-runner)
 
-  **Challenges:** Faced issues setting up an integrated test suite while accommodating the Docker containerized systems for testing. This is on hold until the worker is complete.
-
-  **Next Steps:** Implement the worker to process events from the Redis Stream and write them to PostgreSQL.
+  **Next Steps:**
 
 ### 21 August 2026
 

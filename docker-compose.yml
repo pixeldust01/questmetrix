@@ -12,13 +12,13 @@ services:
       - redis
 
   redis:
-    image: redis:7
+    image: redis:8
     container_name: questmetrix-redis
     ports:
       - "6379:6379"
 
   postgres:
-    image: postgres:16
+    image: postgres:16.15
     container_name: questmetrix-postgres
     environment:
       POSTGRES_DB: questmetrix
@@ -28,6 +28,17 @@ services:
       - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+
+  worker:
+    build:
+      context: ./backend
+    container_name: questmetrix-worker
+    env_file:
+      - ./backend/.env
+    depends_on:
+      - postgres
+      - redis
+    command: ["python", "worker.py"]
 
   test-runner:
     build:
@@ -39,6 +50,11 @@ services:
       - backend
       - postgres
       - redis
+
+    # docker compose --profile test up --build test-runner
+    profiles:
+      - test 
+      
     # Run only integration and e2e folders
     command: ["python", "-m", "pytest", "tests/integration", "tests/e2e"]
 
