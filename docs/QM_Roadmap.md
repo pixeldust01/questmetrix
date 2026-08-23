@@ -178,8 +178,8 @@ Already done as of 11 Aug 2026. For the record, this is what "done" looked like 
 
 ### Week 2 — Deadline: Sun 01 Nov 2026
 
-- [ ] Introduce a message queue (Redis Streams is the lowest-friction option since Redis is already installed; RabbitMQ if you want the "real" message-broker experience)
-- [ ] Change `POST /events` so it pushes to the queue instead of writing directly to PostgreSQL
+- [x] Introduce a message queue (Redis Streams is the lowest-friction option since Redis is already installed; RabbitMQ if you want the "real" message-broker experience)
+- [x] Change `POST /events` so it pushes to the queue instead of writing directly to PostgreSQL
 
 ### Week 3 — Deadline: Sun 08 Nov 2026
 
@@ -261,7 +261,7 @@ Already done as of 11 Aug 2026. For the record, this is what "done" looked like 
 
 ### Week 3 — Deadline: Sun 03 Jan 2027
 
-- [ ] Dockerize the backend and database with `docker-compose` (one command should bring up the full stack)
+- [x] Dockerize the backend and database with `docker-compose` (one command should bring up the full stack)
 - [ ] Set up CI with GitHub Actions: run tests + lint on every push
 
 ### Week 4 — Deadline: Sun 10 Jan 2027
@@ -272,7 +272,7 @@ Already done as of 11 Aug 2026. For the record, this is what "done" looked like 
 
 ### Milestone 7 — Definition of Done
 
-- [ ] `docker-compose up` brings up the full working stack from a clean clone
+- [x] `docker-compose up` brings up the full working stack from a clean clone
 - [ ] Tests run automatically on push via CI
 - [ ] Load test results are recorded somewhere in `docs/`
 - [ ] README accurately reflects what's built — no features described as done that aren't

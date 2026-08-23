@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from database import get_db_connection
 from events import create_event, get_all_events
+from event_queue import publish_event
 
 from analytics import (
     get_game_statistics,
@@ -35,11 +36,15 @@ def root():
 
 @app.post("/events")
 def create_event_endpoint(event: Event):
-    event_id = create_event(event)
+    # event_id = create_event(event)
+
+    event_data = event.model_dump()
+    message_id = publish_event(event_data)
 
     return {
-        "message": "Event stored successfully!",
-        "id": event_id
+        "message": "Event queued successfully!",
+        "event": event_data,
+        "message_id": message_id,
     }
 
 @app.get("/events")

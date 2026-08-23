@@ -1,5 +1,5 @@
 from fastapi.testclient import TestClient
-from database import get_db_connection
+from unittest.mock import patch, MagicMock
 from main import app
 
 client = TestClient(app)
@@ -39,32 +39,45 @@ def test_get_levels(mock_analytics_data):
     assert level_2["average_deaths"] == 0.5
     assert level_2["average_completion_time_seconds"] == 600.0
 
-def test_get_levels_unknown_game():
-    response = client.get(
-        "/levels",
-        params={"game_id": "game_that_does_not_exist"}
-    )
+@patch("analytics.get_db_connection")
+def test_get_levels_unknown_game(mock_get_db):
+    mock_conn = MagicMock()
+    mock_cursor = MagicMock()
+    mock_cursor.fetchall.return_value = [] 
+    mock_conn.cursor.return_value = mock_cursor
+    mock_get_db.return_value = mock_conn
 
+    response = client.get("/levels", params={"game_id": "game_that_does_not_exist"})
     assert response.status_code == 200
     assert response.json() == []
 
-def test_get_games():
-    response = client.get("/games")
+@patch("analytics.get_db_connection")
+def test_get_games(mock_get_db):
+    mock_conn = MagicMock()
+    mock_cursor = MagicMock()
+    mock_cursor.fetchall.return_value = []
+    mock_conn.cursor.return_value = mock_cursor
+    mock_get_db.return_value = mock_conn
+
+    with patch("analytics.redis_client.get", return_value=None), \
+         patch("analytics.redis_client.set"):
+        response = client.get("/games")
 
     assert response.status_code == 200
-
     data = response.json()
-
     assert isinstance(data, list)
 
-def test_get_players():
+@patch("analytics.get_db_connection")
+def test_get_players(mock_get_db):
+    mock_conn = MagicMock()
+    mock_cursor = MagicMock()
+    mock_cursor.fetchall.return_value = []
+    mock_conn.cursor.return_value = mock_cursor
+    mock_get_db.return_value = mock_conn
+
     response = client.get("/players")
-
     assert response.status_code == 200
-
-    data = response.json()
-
-    assert isinstance(data, list)
+    assert isinstance(response.json(), list)
 
 def test_get_sessions(session_test_data):
     response = client.get(

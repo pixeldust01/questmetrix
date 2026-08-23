@@ -63,10 +63,10 @@ also be retrieved through the API.
 - React
 - Redis
 - Docker
+- Message Queue
 
 ### Planned
 
-- Message Queue
 - WebSockets
 - Automated testing
 - CI/CD
@@ -171,12 +171,12 @@ For instructions on setting up the Godot test client, please refer to the SDK's 
 - Session and retention analysis
 - React analytics dashboard
 - Redis caching
-- Docker
+- Docker 
+- Message queue
 
 ### Planned
 
 - Asynchronous event processing
-- Message queue
 - Background workers
 - API authentication
 - API rate limiting
@@ -220,7 +220,7 @@ For instructions on setting up the Godot test client, please refer to the SDK's 
 
 ### Phase 5 - Scalable Infrastructure
 
-- [ ] Add Redis caching
+- [x] Add Redis caching
 - [ ] Add asynchronous event processing
 - [ ] Add message queue
 - [ ] Add background workers

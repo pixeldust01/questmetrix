@@ -1,4 +1,16 @@
 services:
+  backend:
+    build:
+      context: ./backend
+    container_name: questmetrix-backend
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./backend/.env
+    depends_on:
+      - postgres
+      - redis
+
   redis:
     image: redis:7
     container_name: questmetrix-redis
@@ -16,6 +28,19 @@ services:
       - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+
+  test-runner:
+    build:
+      context: ./backend
+    container_name: questmetrix-test-runner
+    env_file:
+      - ./backend/.env
+    depends_on:
+      - backend
+      - postgres
+      - redis
+    # Run only integration and e2e folders
+    command: ["python", "-m", "pytest", "tests/integration", "tests/e2e"]
 
 volumes:
   postgres_data:
