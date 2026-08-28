@@ -190,10 +190,11 @@ def test_get_game_statistics_integration(setup_test_database):
     """
     Tests the get_game_statistics function against a real database.
     """
-    game_stats = get_game_statistics()
-
     game1_id = setup_test_database["game1_id"]
     game2_id = setup_test_database["game2_id"]
+    
+    # Filter by the fixture's game IDs
+    game_stats = get_game_statistics(game_ids=[game1_id, game2_id])
 
     expected_stats = [
         {"game_id": game1_id, "event_count": 6},
@@ -211,7 +212,11 @@ def test_get_player_statistics_integration(setup_test_database):
     """
     Tests the get_player_statistics function against a real database.
     """
-    player_stats = get_player_statistics()
+    game1_id = setup_test_database["game1_id"]
+    game2_id = setup_test_database["game2_id"]
+    
+    # Filter by the fixture's game IDs to isolate players
+    player_stats = get_player_statistics(game_ids=[game1_id, game2_id])
 
     player1_id = setup_test_database["player1_id"]
     player2_id = setup_test_database["player2_id"]

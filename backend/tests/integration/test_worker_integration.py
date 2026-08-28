@@ -27,7 +27,7 @@ def test_pending_event_is_recovered():
     try:
         redis_client.xadd(
             TEST_STREAM,
-            event_data,
+            {k: v.encode("utf-8") for k, v in event_data.items()},
         )
 
         redis_client.xgroup_create(

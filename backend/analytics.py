@@ -137,7 +137,7 @@ def get_level_statistics(game_id: str):
         for row in rows
     ]
 
-def get_game_statistics():
+def get_game_statistics(game_ids: list[str] = None):
     cached_data = redis_client.get("games:statistics")
 
     if cached_data:
@@ -147,14 +147,23 @@ def get_game_statistics():
     conn = get_db_connection()
     cursor = conn.cursor()
 
-    cursor.execute("""
+    query = """
         SELECT
             game_id,
             COUNT(*) AS event_count
         FROM events
+    """
+    params = []
+    if game_ids:
+        query += " WHERE game_id = ANY(%s) "
+        params.append(game_ids)
+        
+    query += """
         GROUP BY game_id
         ORDER BY game_id;
-    """)
+    """
+    
+    cursor.execute(query, params)
 
     rows = cursor.fetchall()
 
@@ -180,18 +189,27 @@ def get_game_statistics():
     return game_statistics
 
 
-def get_player_statistics():
+def get_player_statistics(game_ids: list[str] = None):
     conn = get_db_connection()
     cursor = conn.cursor()
 
-    cursor.execute("""
+    query = """
         SELECT
             player_id,
             COUNT(*) AS event_count
         FROM events
+    """
+    params = []
+    if game_ids:
+        query += " WHERE game_id = ANY(%s) "
+        params.append(game_ids)
+        
+    query += """
         GROUP BY player_id
         ORDER BY player_id;
-    """)
+    """
+    
+    cursor.execute(query, params)
 
     rows = cursor.fetchall()
 

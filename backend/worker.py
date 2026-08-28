@@ -88,7 +88,12 @@ def run_worker():
         for _, stream_messages in messages:
             for message_id, event_data in stream_messages:
                 try:
-                    store_event(event_data)
+                    decoded_event_data = {
+                        k.decode("utf-8") if isinstance(k, bytes) else k: 
+                        v.decode("utf-8") if isinstance(v, bytes) else v
+                        for k, v in event_data.items()
+                    }
+                    store_event(decoded_event_data)
 
                     redis_client.xack(
                         STREAM_NAME,
@@ -120,7 +125,12 @@ def recover_pending_messages():
         for message_id, event_data in messages:
 
             try:
-                store_event(event_data)
+                decoded_event_data = {
+                    k.decode("utf-8") if isinstance(k, bytes) else k: 
+                    v.decode("utf-8") if isinstance(v, bytes) else v
+                    for k, v in event_data.items()
+                }
+                store_event(decoded_event_data)
 
                 redis_client.xack(
                     STREAM_NAME,
