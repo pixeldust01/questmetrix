@@ -78,7 +78,7 @@ def setup_test_database():
 
     # Clean up only the data inserted by this fixture
     cursor.execute(
-        "DELETE FROM events WHERE game_id LIKE %s", (f"integration_game%_{run_id}",)
+        "DELETE FROM events WHERE game_id = ANY(%s)", ([game1_id, game2_id, game3_id],)
     )
     conn.commit()
     cursor.close()

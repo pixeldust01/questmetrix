@@ -74,6 +74,7 @@ def test_queue_event_api_responds_correctly():
         "level": 1,
     }
     try:
+        # 1. Post event and check API response
         response = requests.post(f"{BASE_URL}/events", json=event_data)
         assert response.status_code == 200
 
@@ -81,25 +82,37 @@ def test_queue_event_api_responds_correctly():
         assert response_data["message"] == "Event queued successfully!"
         assert "message_id" in response_data
         assert response_data["event"] == event_data
-    finally:
+
+        # 2. Poll the database to verify persistence
         max_wait_time = 15  # seconds
         start_time = time.time()
-        event_found = False
+        results = []
         while time.time() - start_time < max_wait_time:
             conn = get_db_connection()
             cursor = conn.cursor()
-            cursor.execute("SELECT 1 FROM events WHERE game_id = %s", (game_id,))
-            if cursor.fetchone():
-                event_found = True
-            
+            cursor.execute(
+                """
+                SELECT player_id, game_id
+                FROM events
+                WHERE game_id = %s
+                """,
+                (game_id,),
+            )
+            results = cursor.fetchall()
             cursor.close()
             conn.close()
 
-            if event_found:
+            if results:
                 break
-            time.sleep(0.5)
+            time.sleep(0.5)  # Wait 0.5 seconds before retrying
 
-        # Clean up the database
+        # 3. Assert that the event was found and is correct
+        assert len(results) > 0, "Worker did not persist queued event"
+        assert results[0][0] == event_data["player_id"]
+        assert results[0][1] == game_id
+
+    finally:
+        # 4. Clean up the database
         conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute("DELETE FROM events WHERE game_id = %s", (game_id,))
@@ -210,17 +223,50 @@ def test_e2e_analytics_after_ingestion():
             conn.close()
 
 
-def test_e2e_validation_failure():
+def test_e2e_validation_failure_missing_field():
     """
-    Tests that the API correctly rejects a malformed event.
+    Tests that the API correctly rejects an event with a missing field.
     """
     game_id = f"e2e_validation_game_{uuid.uuid4()}"
-    
+
     # Malformed: 'timestamp' field is missing
     malformed_event = {
         "event": "bad_event",
         "player_id": "player_1",
         "game_id": game_id,
+        "level": 1,
+    }
+
+    # 1. Post the malformed event
+    response = requests.post(f"{BASE_URL}/events", json=malformed_event)
+
+    # 2. Assert that the request was rejected
+    assert response.status_code == 422
+
+    # 3. Assert that nothing was written to the database
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SELECT 1 FROM events WHERE game_id = %s", (game_id,))
+        row = cursor.fetchone()
+        assert row is None
+    finally:
+        cursor.close()
+        conn.close()
+
+
+def test_e2e_validation_failure_invalid_value():
+    """
+    Tests that the API correctly rejects an event with a malformed value.
+    """
+    game_id = f"e2e_validation_game_{uuid.uuid4()}"
+
+    # Malformed: 'timestamp' is not a valid ISO 8601 timestamp
+    malformed_event = {
+        "event": "bad_event",
+        "player_id": "player_1",
+        "game_id": game_id,
+        "timestamp": "not-a-timestamp",
         "level": 1,
     }
 
