@@ -1,3 +1,4 @@
+from datetime import datetime
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -26,7 +27,7 @@ class Event(BaseModel):
     event: str
     player_id: str
     game_id: str
-    timestamp: str
+    timestamp: datetime
     level: int
 
 

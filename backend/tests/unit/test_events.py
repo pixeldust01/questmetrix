@@ -1,7 +1,7 @@
 from fastapi.testclient import TestClient
 from unittest.mock import patch, MagicMock
+from datetime import datetime
 from main import app
-
 
 client = TestClient(app)
 
@@ -16,15 +16,14 @@ def test_create_event_queues_event(mock_publish):
         "timestamp": "2026-08-23T01:00:00",
         "level": 1,
     }
-
     response = client.post("/events", json=event)
-
     assert response.status_code == 200
     assert response.json() == {
         "message": "Event queued successfully!",
         "message_id": "1234567890-0",
         "event": event,
     }
+    event["timestamp"] = datetime(2026, 8, 23, 1, 0, 0)
     mock_publish.assert_called_once_with(event)
 
 

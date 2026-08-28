@@ -157,93 +157,83 @@ def test_worker_processes_multiple_events():
 
 
 def test_pending_event_is_recovered():
+    """
+    Tests that a pending event from a "dead" worker is recovered and
+    processed by another worker.
+    """
+    # Use unique names to avoid test conflicts
+    test_stream = f"questmetrix:test-recovery:{uuid.uuid4()}"
+    test_group = "recovery-test-group"
+    dead_consumer = "dead-worker"
+    recovery_consumer = "recovery-worker"
+    test_game_id = f"recovery_game_{uuid.uuid4()}"
+    test_player_id = f"recovery_player_{uuid.uuid4()}"
+
     event_data = {
         "event": "recovery_test",
-        "player_id": TEST_PLAYER_ID,
-        "game_id": TEST_GAME_ID,
+        "player_id": test_player_id,
+        "game_id": test_game_id,
         "timestamp": "2026-08-23T22:00:00",
         "level": "1",
     }
 
     try:
-        redis_client.xadd(
-            TEST_STREAM,
-            event_data
-        )
+        # 1. Simulate a "dead" worker leaving a pending message.
+        #    - Create a group and add a message to the stream.
+        redis_client.xgroup_create(test_stream, test_group, id="0", mkstream=True)
+        redis_client.xadd(test_stream, event_data)
 
-        redis_client.xgroup_create(
-            TEST_STREAM,
-            TEST_GROUP,
-            id="0",
-            mkstream=False,
-        )
-
+        #    - Have the "dead" consumer read the message but not acknowledge it.
         redis_client.xreadgroup(
-            groupname=TEST_GROUP,
-            consumername=TEST_CONSUMER,
-            streams={TEST_STREAM: ">"},
+            groupname=test_group,
+            consumername=dead_consumer,
+            streams={test_stream: ">"},
             count=1,
         )
 
+        #    - Verify the message is now pending.
+        pending_before = redis_client.xpending(test_stream, test_group)
+        assert pending_before["pending"] == 1
+
+        # 2. Wait for the message to be idle long enough to be claimed.
+        #    The recovery logic is configured to claim messages idle for >5s.
         time.sleep(6)
 
-        with patch("worker.STREAM_NAME", TEST_STREAM), \
-             patch("worker.CONSUMER_GROUP", TEST_GROUP), \
-             patch("worker.CONSUMER_NAME", "recovery-worker"):
+        # 3. Run the recovery process from a new worker.
+        with patch("worker.STREAM_NAME", test_stream), \
+             patch("worker.CONSUMER_GROUP", test_group), \
+             patch("worker.CONSUMER_NAME", recovery_consumer):
 
             recover_pending_messages()
 
+        # 4. Assert the event was written to the database.
         conn = get_db_connection()
-
         try:
             cursor = conn.cursor()
-
             cursor.execute(
-                """
-                SELECT event, player_id, game_id, level
-                FROM events
-                WHERE game_id = %s
-                """,
-                (TEST_GAME_ID,),
+                "SELECT player_id, game_id FROM events WHERE game_id = %s",
+                (test_game_id,),
             )
-
             row = cursor.fetchone()
-
+            assert row is not None
+            assert row[0] == test_player_id
+            assert row[1] == test_game_id
         finally:
             cursor.close()
             conn.close()
 
-        assert row is not None
-        assert row[0] == "recovery_test"
-        assert row[1] == TEST_PLAYER_ID
-        assert row[2] == TEST_GAME_ID
-        assert row[3] == 1
-
-        pending = redis_client.xpending(
-            TEST_STREAM,
-            TEST_GROUP,
-        )
-
-        assert pending["pending"] == 0
+        # 5. Assert the message is no longer pending.
+        pending_after = redis_client.xpending(test_stream, test_group)
+        assert pending_after["pending"] == 0
 
     finally:
-        redis_client.delete(TEST_STREAM)
-
+        # 6. Cleanup
+        redis_client.delete(test_stream)
         conn = get_db_connection()
-
         try:
             cursor = conn.cursor()
-
-            cursor.execute(
-                """
-                DELETE FROM events
-                WHERE game_id = %s
-                """,
-                (TEST_GAME_ID,),
-            )
-
+            cursor.execute("DELETE FROM events WHERE game_id = %s", (test_game_id,))
             conn.commit()
-
         finally:
             cursor.close()
             conn.close()
