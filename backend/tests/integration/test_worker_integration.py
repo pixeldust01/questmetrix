@@ -9,7 +9,6 @@ from worker import recover_pending_messages, process_single_batch
 TEST_STREAM = f"questmetrix:test-recovery:{uuid.uuid4()}"
 TEST_GROUP = "recovery-test-group"
 TEST_CONSUMER = "dead-worker"
-
 TEST_GAME_ID = f"recovery_test_game_{uuid.uuid4()}"
 TEST_PLAYER_ID = f"recovery_test_player_{uuid.uuid4()}"
 
@@ -44,7 +43,8 @@ def test_worker_processes_event():
         # 2. Add an event to the stream
         redis_client.xadd(
             test_stream,
-            {k: v.encode("utf-8") for k, v in event_data.items()},
+            # {k: v.encode("utf-8") for k, v in event_data.items()},
+            event_data
         )
 
         # 3. Process the event
@@ -85,6 +85,77 @@ def test_worker_processes_event():
             conn.close()
 
 
+def test_worker_processes_multiple_events():
+    """
+    Tests that the worker can successfully process a batch of multiple events.
+    """
+    test_stream = f"questmetrix:test-batch:{uuid.uuid4()}"
+    test_group = "batch-test-group"
+    test_consumer = "batch-worker"
+    test_game_id = f"batch_game_{uuid.uuid4()}"
+    num_events = 5
+
+    try:
+        # 1. Set up the consumer group
+        redis_client.xgroup_create(
+            test_stream,
+            test_group,
+            id="0",
+            mkstream=True,
+        )
+
+        # 2. Add multiple events to the stream
+        for i in range(num_events):
+            event_data = {
+                "event": "batch_test",
+                "player_id": f"batch_player_{i}",
+                "game_id": test_game_id,
+                "timestamp": "2026-08-24T10:00:00",
+                "level": str(i + 1),
+            }
+            redis_client.xadd(
+                test_stream,
+                event_data
+            )
+
+        # 3. Process the batch of events
+        with patch("worker.STREAM_NAME", test_stream), \
+             patch("worker.CONSUMER_GROUP", test_group), \
+             patch("worker.CONSUMER_NAME", test_consumer):
+
+            process_single_batch()
+
+        # 4. Assert all events were written to the database
+        conn = get_db_connection()
+        try:
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT COUNT(*) FROM events WHERE game_id = %s",
+                (test_game_id,),
+            )
+            count = cursor.fetchone()[0]
+            assert count == num_events
+        finally:
+            cursor.close()
+            conn.close()
+
+        # 5. Assert all messages were acknowledged
+        pending = redis_client.xpending(test_stream, test_group)
+        assert pending["pending"] == 0
+
+    finally:
+        # 6. Cleanup
+        redis_client.delete(test_stream)
+        conn = get_db_connection()
+        try:
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM events WHERE game_id = %s", (test_game_id,))
+            conn.commit()
+        finally:
+            cursor.close()
+            conn.close()
+
+
 def test_pending_event_is_recovered():
     event_data = {
         "event": "recovery_test",
@@ -97,7 +168,7 @@ def test_pending_event_is_recovered():
     try:
         redis_client.xadd(
             TEST_STREAM,
-            {k: v.encode("utf-8") for k, v in event_data.items()},
+            event_data
         )
 
         redis_client.xgroup_create(
@@ -202,7 +273,7 @@ def test_pending_event_recovery_fails_on_db_error():
         # 1. Create a pending message
         redis_client.xadd(
             test_stream,
-            {k: v.encode("utf-8") for k, v in event_data.items()},
+            event_data
         )
         redis_client.xgroup_create(
             test_stream,
@@ -248,6 +319,67 @@ def test_pending_event_recovery_fails_on_db_error():
             conn.close()
 
     finally:
+        redis_client.delete(test_stream)
+        conn = get_db_connection()
+        try:
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM events WHERE game_id = %s", (test_game_id,))
+            conn.commit()
+        finally:
+            cursor.close()
+            conn.close()
+
+def test_worker_handles_malformed_event():
+    """
+    Tests that the worker does not acknowledge a message that is malformed
+    and causes a database error.
+    """
+    test_stream = f"questmetrix:test-malformed:{uuid.uuid4()}"
+    test_group = "malformed-test-group"
+    test_consumer = "malformed-worker"
+    test_game_id = f"malformed_game_{uuid.uuid4()}"
+
+    malformed_event_data = {
+        "event": "malformed_event",
+        "player_id": "player_1",
+        "game_id": test_game_id,
+        "timestamp": "not-a-real-timestamp",
+        "level": "this-is-not-a-number",
+    }
+
+    try:
+        # 1. Set up the consumer group and add the malformed event
+        redis_client.xgroup_create(test_stream, test_group, id="0", mkstream=True)
+        redis_client.xadd(test_stream, malformed_event_data)
+
+        # 2. Process the event
+        with patch("worker.STREAM_NAME", test_stream), \
+             patch("worker.CONSUMER_GROUP", test_group), \
+             patch("worker.CONSUMER_NAME", test_consumer):
+
+            # This will raise an exception internally, which is caught
+            process_single_batch()
+
+        # 3. Assert that the message was NOT written to the database
+        conn = get_db_connection()
+        try:
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT 1 FROM events WHERE game_id = %s",
+                (test_game_id,),
+            )
+            row = cursor.fetchone()
+            assert row is None
+        finally:
+            cursor.close()
+            conn.close()
+
+        # 4. Assert that the message is still pending
+        pending = redis_client.xpending(test_stream, test_group)
+        assert pending["pending"] == 1
+
+    finally:
+        # 5. Cleanup
         redis_client.delete(test_stream)
         conn = get_db_connection()
         try:

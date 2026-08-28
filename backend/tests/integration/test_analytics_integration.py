@@ -31,23 +31,23 @@ def setup_test_database():
 
     mock_events = [
         # Game 1, Player 1: Completes level 1 and returns the next day
-        ("player_started_level", player1_id, game1_id, "2026-08-23T10:00:00Z", 1),
-        ("level_completed", player1_id, game1_id, "2026-08-23T10:05:00Z", 1),
-        ("player_started_level", player1_id, game1_id, "2026-08-24T11:00:00Z", 1),
+        ("player_started_level", player1_id, game1_id, "2026-08-23T10:00:00", 1),
+        ("level_completed", player1_id, game1_id, "2026-08-23T10:05:00", 1),
+        ("player_started_level", player1_id, game1_id, "2026-08-24T11:00:00", 1),
         # Game 1, Player 2: Starts level 1 and dies
-        ("player_started_level", player2_id, game1_id, "2026-08-23T11:00:00Z", 1),
-        ("player_died", player2_id, game1_id, "2026-08-23T11:01:00Z", 1),
+        ("player_started_level", player2_id, game1_id, "2026-08-23T11:00:00", 1),
+        ("player_died", player2_id, game1_id, "2026-08-23T11:01:00", 1),
         # Game 1, Player 3: Starts level 2
-        ("player_started_level", player3_id, game1_id, "2026-08-23T12:00:00Z", 2),
+        ("player_started_level", player3_id, game1_id, "2026-08-23T12:00:00", 2),
         # Game 2, Player 4: Starts level 1
-        ("player_started_level", player4_id, game2_id, "2026-08-23T12:00:00Z", 1),
+        ("player_started_level", player4_id, game2_id, "2026-08-23T12:00:00", 1),
         # Game 1, Player 5: Tests session boundaries
-        ("player_started_level", player5_id, game1_id, "2026-08-25T10:00:00Z", 1),
-        ("player_died", player5_id, game1_id, "2026-08-25T10:29:00Z", 1),
-        ("player_started_level", player5_id, game1_id, "2026-08-25T11:00:00Z", 1),
-        ("player_died", player5_id, game1_id, "2026-08-25T11:01:00Z", 1),
+        ("player_started_level", player5_id, game1_id, "2026-08-25T10:00:00", 1),
+        ("player_died", player5_id, game1_id, "2026-08-25T10:29:00", 1),
+        ("player_started_level", player5_id, game1_id, "2026-08-25T11:00:00", 1),
+        ("player_died", player5_id, game1_id, "2026-08-25T11:01:00", 1),
         # Game 1, Player 6: Starts and never returns
-        ("player_started_level", player6_id, game1_id, "2026-08-26T10:00:00Z", 1),
+        ("player_started_level", player6_id, game1_id, "2026-08-26T10:00:00", 1),
     ]
 
     conn = get_db_connection()
@@ -243,7 +243,7 @@ def test_get_retention_no_players():
 
 def test_get_retention_for_game_with_no_events(setup_test_database):
     """
-    Tests the get_retention function for a game that exists but has no events.
+    Tests get_retention for a game with no telemetry events.
     """
     game3_id = setup_test_database["game3_id"]
     retention = get_retention(game3_id)
@@ -304,3 +304,20 @@ def test_get_player_statistics_integration(setup_test_database):
     sorted_expected_stats = sorted(expected_stats, key=lambda x: x["player_id"])
 
     assert sorted_player_stats == sorted_expected_stats
+
+
+def test_get_level_statistics_no_events():
+    result = get_level_statistics("non_existent_game")
+    assert result == []
+
+
+def test_get_sessions_no_events():
+    result = get_sessions("non_existent_game")
+    assert result == []
+
+
+def test_get_player_statistics_no_events():
+    result = get_player_statistics(
+        game_ids=["non_existent_game"]
+    )
+    assert result == []

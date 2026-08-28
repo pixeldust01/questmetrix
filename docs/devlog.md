@@ -5,6 +5,7 @@ A chronological log of the project's development milestones.
 ### 28 August 2026
 
 - Enhanced the `test-runner` test suite (ongoing)
+- I have standardized the timestamps across all test files by removing the trailing 'Z'. This ensures consistency with your database schema.
 
 ### 23 August 2026
 
