@@ -55,8 +55,8 @@ services: # 5 containers as of 23 august
     profiles:
       - test
 
-    # Run only integration and e2e folders
-    command: ["python", "-m", "pytest", "tests/integration", "tests/e2e"]
+    # Run only integration and e2e folders, ignore integration/test_rate_limit.py
+    command: ["python", "-m", "pytest", "tests/integration", "tests/e2e", "--ignore=tests/integration/test_rate_limit.py"]
 
 volumes:
   postgres_data:

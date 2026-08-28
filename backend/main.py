@@ -1,10 +1,16 @@
 from datetime import datetime
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from database import get_db_connection
 from events import create_event, get_all_events
 from event_queue import publish_event
+from slowapi import Limiter
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
+
+limiter = Limiter(key_func=get_remote_address)
 
 from analytics import (
     get_game_statistics,
@@ -15,6 +21,8 @@ from analytics import (
 ) 
 
 app = FastAPI()
+app.state.limiter = limiter
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173"],
@@ -36,7 +44,8 @@ def root():
     return {"message": "QuestMetrix backend is running!"}
 
 @app.post("/events")
-def create_event_endpoint(event: Event):
+@limiter.limit("100/minute")
+def create_event_endpoint(request: Request, event: Event):
     # event_id = create_event(event)
 
     event_data = event.model_dump()
@@ -83,3 +92,10 @@ def get_sessions_endpoint(game_id: str):
 @app.get("/retention")
 def get_retention_endpoint(game_id: str):
     return get_retention(game_id)
+
+@app.exception_handler(RateLimitExceeded)
+async def rate_limit_handler(request, exc):
+    return JSONResponse(
+        status_code=429,
+        content={"detail": "Rate limit exceeded"},
+    )
