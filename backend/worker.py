@@ -74,40 +74,44 @@ def run_worker():
     recover_pending_messages()
 
     while True:
-        messages = redis_client.xreadgroup(
-            groupname=CONSUMER_GROUP,
-            consumername=CONSUMER_NAME,
-            streams={STREAM_NAME: ">"},
-            count=10,
-            block=1000,
-        )
+        process_single_batch()
 
-        if not messages:
-            continue
 
-        for _, stream_messages in messages:
-            for message_id, event_data in stream_messages:
-                try:
-                    decoded_event_data = {
-                        k.decode("utf-8") if isinstance(k, bytes) else k: 
-                        v.decode("utf-8") if isinstance(v, bytes) else v
-                        for k, v in event_data.items()
-                    }
-                    store_event(decoded_event_data)
+def process_single_batch():
+    messages = redis_client.xreadgroup(
+        groupname=CONSUMER_GROUP,
+        consumername=CONSUMER_NAME,
+        streams={STREAM_NAME: ">"},
+        count=10,
+        block=1000,
+    )
 
-                    redis_client.xack(
-                        STREAM_NAME,
-                        CONSUMER_GROUP,
-                        message_id,
-                    )
+    if not messages:
+        return
 
-                    logging.info(f"Processed event {message_id}")
+    for _, stream_messages in messages:
+        for message_id, event_data in stream_messages:
+            try:
+                decoded_event_data = {
+                    k.decode("utf-8") if isinstance(k, bytes) else k:
+                    v.decode("utf-8") if isinstance(v, bytes) else v
+                    for k, v in event_data.items()
+                }
+                store_event(decoded_event_data)
 
-                except Exception as error:
-                    logging.error(
-                        f"Failed to process event "
-                        f"{message_id}: {error}"
-                    )
+                redis_client.xack(
+                    STREAM_NAME,
+                    CONSUMER_GROUP,
+                    message_id,
+                )
+
+                logging.info(f"Processed event {message_id}")
+
+            except Exception as error:
+                logging.error(
+                    f"Failed to process event "
+                    f"{message_id}: {error}"
+                )
 
 def recover_pending_messages():
     try:

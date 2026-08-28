@@ -78,33 +78,27 @@ def get_level_statistics(game_id: str):
         (
             SELECT
                 level,
-                AVG(completion_time_seconds)
-                    AS average_completion_time_seconds
-            FROM
-            (
+                AVG(
+                    EXTRACT(EPOCH FROM (next_event_time - start_time))
+                ) AS average_completion_time_seconds
+            FROM (
                 SELECT
-                    started_events.player_id,
-                    started_events.level,
-
-                    EXTRACT(
-                        EPOCH FROM (
-                            completed_events.timestamp
-                            - started_events.timestamp
-                        )
-                    ) AS completion_time_seconds
-
-                FROM events AS started_events
-
-                JOIN events AS completed_events
-                    ON started_events.player_id = completed_events.player_id
-                    AND started_events.game_id = completed_events.game_id
-                    AND started_events.level = completed_events.level
-
-                WHERE started_events.game_id = %s
-                  AND started_events.event = 'player_started_level'
-                  AND completed_events.event = 'level_completed'
-            ) AS completion_times
-
+                    level,
+                    event,
+                    timestamp as start_time,
+                    LEAD(timestamp) OVER (
+                        PARTITION BY player_id, level ORDER BY timestamp
+                    ) as next_event_time,
+                    LEAD(event) OVER (
+                        PARTITION BY player_id, level ORDER BY timestamp
+                    ) as next_event_type
+                FROM events
+                WHERE game_id = %s AND event IN (
+                    'player_started_level', 'level_completed'
+                )
+            ) AS paired_events
+            WHERE event = 'player_started_level'
+              AND next_event_type = 'level_completed'
             GROUP BY level
         ) AS completion_times
             ON started.level = completion_times.level

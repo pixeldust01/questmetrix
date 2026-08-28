@@ -4,8 +4,7 @@ A chronological log of the project's development milestones.
 
 ### 28 August 2026
 
-- I've refactored `test_event_flow.py` to function as a true integration test. Instead of making an HTTP call, the test now directly imports and uses the `create_event` function from `backend/events.py`. The test now creates an Event object and passes it directly to `create_event`. This bypasses the API layer entirely, making the test faster and more focused on its core purpose: verifying that the event persistence logic works as expected.
-- 
+- Enhanced the `test-runner` test suite (ongoing)
 
 ### 23 August 2026
 
