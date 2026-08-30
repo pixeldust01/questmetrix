@@ -1,5 +1,6 @@
 import uuid
 import pytest
+from redis_client import redis_client
 from datetime import datetime, date
 from database import get_db_connection
 from analytics import (
@@ -257,6 +258,9 @@ def test_get_game_statistics_integration(setup_test_database):
     game1_id = setup_test_database["game1_id"]
     game2_id = setup_test_database["game2_id"]
     game3_id = setup_test_database["game3_id"]
+
+    # Invalidate cache to prevent stale data from previous test runs
+    redis_client.delete("games:statistics")
 
     # Filter by the fixture's game IDs
     game_stats = get_game_statistics(game_ids=[game1_id, game2_id, game3_id])
