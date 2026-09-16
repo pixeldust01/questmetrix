@@ -148,9 +148,7 @@ The project should not adopt complex infrastructure before the simpler version i
 - A raw event table, summary statistic cards, and charts (events over time, level completion rates).
 - Loading and error states are handled in the UI rather than showing a blank screen.
 
-#### Milestone 5 — Scalable Infrastructure (in progress)
-
-Completed so far:
+#### Milestone 5 — Scalable Infrastructure
 
 - Redis installed and connected; `GET /games` cached for 60 seconds, with cache hit/expiry/manual-invalidation behavior tested.
 - The full stack (FastAPI, PostgreSQL with a persistent volume, Redis) containerized and orchestrated with Docker Compose, communicating via internal service names, and runnable end-to-end with one command.
@@ -158,21 +156,15 @@ Completed so far:
 - `POST /events` changed to publish to the queue instead of writing directly to PostgreSQL.
 - A background worker (`worker.py`) that consumes the queue and writes to PostgreSQL, with `logging.info()` output captured by `docker logs`.
 - An expanded, restructured automated test suite (`unit/`, `integration/`, `e2e/`) with a dedicated `test-runner` Docker Compose service — originally scoped for Phase 7, pulled forward because the async pipeline needed a reliable way to verify it.
-
-Still open (Milestone 5, Week 4):
-
 - Rate limiting on `POST /events`.
 - API key authentication.
-- Confirming no events are lost if the worker restarts mid-processing.
-- Wiring the worker to update/invalidate Redis cache entries after a successful write (currently the cache and the queue/worker path aren't yet connected to each other).
+- Confirmed no events are lost if the worker restarts mid-processing.
+- The worker is wired to update/invalidate Redis cache entries after a successful write.
 
 ### 2.3 Planned Scope
 
 #### Scalable Infrastructure (remaining)
 
-- Rate limiting
-- API authentication
-- Worker ↔ cache integration and restart-safety verification (see Milestone 5 above)
 - WebSockets
 - CI/CD
 - Full monitoring and alerting (structured JSON logging currently exists only in `worker.py`, via plain `logging.info()` calls — not yet the structured format described in §9.1)
@@ -223,40 +215,27 @@ The project is also not intended to become a full commercial-scale analytics ser
 
 ### 3.1 Current Architecture
 
-As of Milestone 5 (in progress), the architecture is a decoupled, asynchronous pipeline — not the direct-write design described in earlier revisions of this document:
+As of Milestone 5, the architecture is a decoupled, asynchronous pipeline protected by rate limiting and API key authentication:
 
 ```text
-Godot SDK / Client (Swagger / manual JSON)
-        │
-        ▼
-     FastAPI
-        │
-        │ Pydantic validation
-        ▼
-  Redis Streams (queue)
-        │
-        ▼
-    worker.py
-        │
-        ▼
-   PostgreSQL
-        │
-        ▼
-questmetrix.events
-        │
-        ▼
-Analytics API (games / players / levels)
-        │
-        ▼
-  Redis (60s cache on /games)
-        │
-        ▼
-  React Dashboard
+Game/SDK
+    ↓
++--------------------+
+| FastAPI            |
+| - Rate limiting    |
+| - API key auth     |
++--------------------+
+    ↓
+Redis Stream (queue)
+    ↓
+Worker (worker.py)
+    ↓
+PostgreSQL
 ```
 
-`POST /events` no longer writes to PostgreSQL directly — it publishes the validated event onto a Redis Stream, and a separate background worker (`worker.py`) consumes that stream and performs the actual database write, logging its activity via `logging.info()` rather than `print()` so it's visible through `docker logs`. The entire stack (FastAPI, PostgreSQL with a persistent volume, Redis, and the worker) runs under Docker Compose and communicates via internal service names.
+`POST /events` no longer writes to PostgreSQL directly. It publishes the validated event onto a Redis Stream. A separate background worker (`worker.py`) consumes that stream and performs the database write. The entire stack (FastAPI, PostgreSQL, Redis, and the worker) runs under Docker Compose and communicates via internal service names.
 
-**Not yet wired:** the worker does not yet update or invalidate Redis cache entries after a successful write, and there is no confirmed guarantee yet that an in-flight event survives a worker restart without being lost or duplicated — both are open items for Milestone 5, Week 4.
+The worker is also responsible for invalidating the Redis cache after a successful database write, ensuring data consistency between the cache and the primary database.
 
 For reference, the original Milestone 1–2 baseline (before the queue existed) was a direct write:
 
@@ -329,9 +308,9 @@ Analytics API → React Dashboard
 
         ↓
 
-Milestone 5 🔄 In progress
-Redis caching → Docker containerization → Redis Streams queue → Worker → PostgreSQL
-(remaining: rate limiting, API authentication, worker↔cache integration)
+Milestone 5 ✅ Complete
+Redis caching → Docker containerization → Redis Streams queue → Worker → PostgreSQL → Rate limiting, API authentication, worker↔cache integration
+
 
         ↓
 
@@ -381,42 +360,57 @@ Dashboard                                    ✅ implemented (polls the API;
                                                  no live push yet — see §3.2)
 ```
 
----
+### 3.6 Testing Architecture
+
+The project employs a multi-layered testing strategy, organized as follows:
+
+```
+tests/
+├── unit/
+├── integration/
+└── e2e/
+```
+
+- **Unit Tests (`/unit`):** These tests focus on individual components in isolation. They use mocking to avoid external dependencies like databases or APIs.
+- **Integration Tests (`/integration`):** These tests verify the interaction between different components of the system, such as the API and the database.
+- **End-to-End (E2E) Tests (`/e2e`):** These tests validate the entire application flow, from the client (SDK) to the database.
+
+## Integration and E2E tests are run against a containerized environment using a dedicated `test-runner` service in Docker Compose. This ensures that tests are executed in a clean, consistent, and isolated environment that mirrors the production setup.
 
 ## 4. Technology Stack
 
 ### 4.1 Currently Used
 
-| Component         | Technology                   | Role                              | Reason                                                                                                                            |
-| ----------------- | ---------------------------- | --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| Language          | Python                       | Backend programming language      | Familiar, readable, and suitable for rapid backend development                                                                    |
-| API framework     | FastAPI                      | HTTP API and routing              | Provides typed request validation and automatic OpenAPI documentation                                                             |
-| Validation        | Pydantic                     | Event data contracts              | Integrates directly with FastAPI and validates structured payloads                                                                |
-| Database          | PostgreSQL 18                | Persistent event storage          | Relational, mature, structured, and suitable for querying telemetry data                                                          |
-| DB driver         | psycopg2-binary              | Python → PostgreSQL communication | Provides PostgreSQL connectivity from Python                                                                                      |
-| Config loader     | python-dotenv                | Environment configuration         | Keeps database credentials outside source code                                                                                    |
-| API testing       | FastAPI Swagger/OpenAPI docs | Manual API testing                | Allows endpoints to be tested without a separate frontend                                                                         |
-| Version control   | Git                          | Source/version tracking           | Provides local history and reproducible development checkpoints                                                                   |
-| Remote repository | GitHub                       | Hosted repository                 | Stores project history and supports collaboration/review                                                                          |
-| Game SDK          | Godot / GDScript             | Game-side telemetry client        | Fits the project's game-development focus and existing Godot usage                                                                |
-| Dashboard         | React                        | Analytics UI                      | Provides a component-based frontend for data visualization                                                                        |
-| Cache             | Redis                        | Fast-access data                  | Redis is used as its in-memory data structures are suitable for frequently accessed metrics, session lookups, and real-time views |
-| Containerization  | Docker                       | Reproducible deployment           | Makes development and deployment environments consistent, so the full stack can be launched with a single command                 |
-| Message queue     | Redis Streams                | Asynchronous event delivery       | See "Decision update" below                                                                                                        |
-| Workers           | Python background worker (`worker.py`) | Event processing        | Decouples ingestion from persistence; consumes the Redis Stream and writes to PostgreSQL                                          |
-| Testing tooling   | pytest + Docker Compose `test-runner` | Automated testing        | Runs `unit/`, `integration/`, and `e2e/` suites in a consistent containerized environment                                          |
+| Component         | Technology                             | Role                              | Reason                                                                                                                            |
+| ----------------- | -------------------------------------- | --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| Language          | Python                                 | Backend programming language      | Familiar, readable, and suitable for rapid backend development                                                                    |
+| API framework     | FastAPI                                | HTTP API and routing              | Provides typed request validation and automatic OpenAPI documentation                                                             |
+| Validation        | Pydantic                               | Event data contracts              | Integrates directly with FastAPI and validates structured payloads                                                                |
+| Database          | PostgreSQL 18                          | Persistent event storage          | Relational, mature, structured, and suitable for querying telemetry data                                                          |
+| DB driver         | psycopg2-binary                        | Python → PostgreSQL communication | Provides PostgreSQL connectivity from Python                                                                                      |
+| Config loader     | python-dotenv                          | Environment configuration         | Keeps database credentials outside source code                                                                                    |
+| API testing       | FastAPI Swagger/OpenAPI docs           | Manual API testing                | Allows endpoints to be tested without a separate frontend                                                                         |
+| Version control   | Git                                    | Source/version tracking           | Provides local history and reproducible development checkpoints                                                                   |
+| Remote repository | GitHub                                 | Hosted repository                 | Stores project history and supports collaboration/review                                                                          |
+| Game SDK          | Godot / GDScript                       | Game-side telemetry client        | Fits the project's game-development focus and existing Godot usage                                                                |
+| Dashboard         | React                                  | Analytics UI                      | Provides a component-based frontend for data visualization                                                                        |
+| Cache             | Redis                                  | Fast-access data                  | Redis is used as its in-memory data structures are suitable for frequently accessed metrics, session lookups, and real-time views |
+| Containerization  | Docker                                 | Reproducible deployment           | Makes development and deployment environments consistent, so the full stack can be launched with a single command                 |
+| Message queue     | Redis Streams                          | Asynchronous event delivery       | See "Decision update" below                                                                                                       |
+| Workers           | Python background worker (`worker.py`) | Event processing                  | Decouples ingestion from persistence; consumes the Redis Stream and writes to PostgreSQL                                          |
+| Testing tooling   | pytest + Docker Compose `test-runner`  | Automated testing                 | Runs `unit/`, `integration/`, and `e2e/` suites in a consistent containerized environment                                         |
 
 **Decision update — message queue:** v0.2 of this document listed RabbitMQ as the preferred candidate. In implementation, **Redis Streams** was chosen instead, since Redis was already deployed for caching — this avoided introducing a second piece of infrastructure to run and operate. RabbitMQ remains worth revisiting later if Redis Streams becomes a limiting factor.
 
 ### 4.2 Planned
 
-| Component         | Technology                            | Role                        | Decision / Rationale                                                                                                                                                                                                             |
-| ----------------- | ------------------------------------- | --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Authentication    | API keys (`game_id` ↔ key mapping)    | Restrict who can call the API | Simplest model that scopes access per game without full OAuth complexity                                                                                                                                                        |
-| Rate limiting     | Middleware-based (library TBD)        | Prevent API abuse           | Needed before the API is exposed anywhere beyond localhost                                                                                                                                                                        |
-| Real-time updates | WebSockets                            | Live dashboard updates      | Allows the server to push relevant changes without polling                                                                                                                                                                       |
-| CI/CD             | GitHub Actions or similar             | Automated workflow          | Automates testing and deployment checks                                                                                                                                                                                          |
-| Load testing      | Locust or k6 (candidate)              | Performance validation      | The `unit`/`integration`/`e2e` suite now exists (see above); load testing and CI integration are the remaining testing gaps                                                                                                     |
+| Component         | Technology                         | Role                          | Decision / Rationale                                                                                                        |
+| ----------------- | ---------------------------------- | ----------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| Authentication    | API keys (`game_id` ↔ key mapping) | Restrict who can call the API | Simplest model that scopes access per game without full OAuth complexity                                                    |
+| Rate limiting     | Middleware-based (library TBD)     | Prevent API abuse             | Needed before the API is exposed anywhere beyond localhost                                                                  |
+| Real-time updates | WebSockets                         | Live dashboard updates        | Allows the server to push relevant changes without polling                                                                  |
+| CI/CD             | GitHub Actions or similar          | Automated workflow            | Automates testing and deployment checks                                                                                     |
+| Load testing      | Locust or k6 (candidate)           | Performance validation        | The `unit`/`integration`/`e2e` suite now exists (see above); load testing and CI integration are the remaining testing gaps |
 
 **Technology decisions marked as candidate/planned are not final until the corresponding milestone is implemented and evaluated.**
 
@@ -461,15 +455,15 @@ The current sample event is:
 
 ### 5.3 Event Dictionary — Initial Registry
 
-| Event Type             | Status                   | Purpose                       | Example Additional Data          |
-| ---------------------- | ------------------------ | ----------------------------- | -------------------------------- |
-| `enemy_killed`         | Implemented              | Records an enemy defeat       | enemy ID/type may be added later |
-| `level_completed`      | Implemented (analytics)  | Records completion of a level; drives `GET /levels` completion-rate and avg-completion-time stats | completion time, score |
-| `player_started_level` | Planned                  | Records level start           | level ID                         |
-| `player_died`          | Implemented (analytics)  | Records player death; drives `GET /levels` death-rate stats | cause/enemy ID  |
-| `item_collected`       | Planned                  | Records item collection       | item ID/type                     |
-| `dialogue_selected`    | Planned                  | Records dialogue choice       | dialogue/node ID                 |
-| `player_quit`          | Planned                  | Records a player leaving      | session ID/reason                |
+| Event Type             | Status                  | Purpose                                                                                           | Example Additional Data          |
+| ---------------------- | ----------------------- | ------------------------------------------------------------------------------------------------- | -------------------------------- |
+| `enemy_killed`         | Implemented             | Records an enemy defeat                                                                           | enemy ID/type may be added later |
+| `level_completed`      | Implemented (analytics) | Records completion of a level; drives `GET /levels` completion-rate and avg-completion-time stats | completion time, score           |
+| `player_started_level` | Planned                 | Records level start                                                                               | level ID                         |
+| `player_died`          | Implemented (analytics) | Records player death; drives `GET /levels` death-rate stats                                       | cause/enemy ID                   |
+| `item_collected`       | Planned                 | Records item collection                                                                           | item ID/type                     |
+| `dialogue_selected`    | Planned                 | Records dialogue choice                                                                           | dialogue/node ID                 |
+| `player_quit`          | Planned                 | Records a player leaving                                                                          | session ID/reason                |
 
 The event registry must be updated whenever a new supported event type is added.
 
@@ -726,18 +720,18 @@ Example:
 
 ### 6.5 Implemented Analytics Endpoints (Milestone 3)
 
-| Method | Endpoint   | Purpose                                                             | Status      |
-| ------ | ---------- | -------------------------------------------------------------------- | ----------- |
-| `GET`  | `/games`   | Game-level aggregated statistics; cached for 60 seconds               | Implemented |
-| `GET`  | `/players` | Player-level aggregated statistics                                   | Implemented |
-| `GET`  | `/levels`  | Level completion rate, average deaths, and average completion time   | Implemented |
+| Method | Endpoint   | Purpose                                                            | Status      |
+| ------ | ---------- | ------------------------------------------------------------------ | ----------- |
+| `GET`  | `/games`   | Game-level aggregated statistics; cached for 60 seconds            | Implemented |
+| `GET`  | `/players` | Player-level aggregated statistics                                 | Implemented |
+| `GET`  | `/levels`  | Level completion rate, average deaths, and average completion time | Implemented |
 
 **Note:** these are implemented and live in `analytics.py`, but full request/response contracts (in the format used for `POST`/`GET /events` above) haven't been documented here yet — add them the next time this section is reviewed (§15). Session grouping and the daily retention metric are also implemented (§2.2), but it's unconfirmed whether they're exposed via a dedicated endpoint (e.g. `/sessions`) or used only internally — verify against `analytics.py` before documenting a contract for it.
 
 ### 6.6 Planned Endpoints
 
 | Method      | Endpoint | Purpose                           |
-| ----------- | -------- | ---------------------------------- |
+| ----------- | -------- | --------------------------------- |
 | `WEBSOCKET` | `/ws`    | Real-time event/dashboard updates |
 
 Rate limiting and API-key authentication (Milestone 5, Week 4) will apply to all endpoints above once implemented — see §10.
@@ -921,6 +915,7 @@ Milestone 1 was originally manually verified using FastAPI Swagger/OpenAPI, `POS
 As of Milestone 5, this has changed: the backend test suite has been restructured into `unit`, `integration`, and `e2e` layers and is run automatically through the `test-runner` Docker Compose service (§8.4) rather than purely by hand.
 
 **Still open:**
+
 - CI integration (tests run automatically on push) — Phase 7.
 - Coverage tracking/reporting (`pytest-cov`) — not yet wired in.
 - A specific test confirming no events are lost or duplicated if the worker restarts mid-processing — this is an explicitly open item on the current milestone's checklist, not yet covered by an automated test.
@@ -1322,22 +1317,22 @@ Database migrations must be designed carefully because application rollback does
 
 ## 13. Risks & Mitigations
 
-| Risk                                | Description                                                      | Mitigation                                                                              |
-| ----------------------------------- | ---------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
-| Asynchronous programming complexity | Queues/workers can introduce race conditions and ordering issues | Introduce async components only after synchronous baseline works; add integration tests |
-| Session heuristics                  | A session has no universally correct definition                  | Start with a documented time-based heuristic and validate it against data               |
-| CORS                                | React and API may run on different origins                       | Configure explicit allowed origins; avoid permissive production CORS                    |
-| Scope creep                         | New features can derail the current milestone                    | Maintain `docs/BACKLOG.md`; implement only current milestone scope                      |
-| Silent distributed failures         | Queue/worker failures may not be visible to users                | Structured logs, queue monitoring, retries, dead-letter queues, alerts. **Status: now live** — the queue and worker exist as of Milestone 5, but worker-restart resilience hasn't been verified yet (open checklist item) and there's no dead-letter queue or alerting in place. |
+| Risk                                | Description                                                      | Mitigation                                                                                                                                                                                                                                                                            |
+| ----------------------------------- | ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Asynchronous programming complexity | Queues/workers can introduce race conditions and ordering issues | Introduce async components only after synchronous baseline works; add integration tests                                                                                                                                                                                               |
+| Session heuristics                  | A session has no universally correct definition                  | Start with a documented time-based heuristic and validate it against data                                                                                                                                                                                                             |
+| CORS                                | React and API may run on different origins                       | Configure explicit allowed origins; avoid permissive production CORS                                                                                                                                                                                                                  |
+| Scope creep                         | New features can derail the current milestone                    | Maintain `docs/BACKLOG.md`; implement only current milestone scope                                                                                                                                                                                                                    |
+| Silent distributed failures         | Queue/worker failures may not be visible to users                | Structured logs, queue monitoring, retries, dead-letter queues, alerts. **Status: now live** — the queue and worker exist as of Milestone 5, but worker-restart resilience hasn't been verified yet (open checklist item) and there's no dead-letter queue or alerting in place.      |
 | Duplicate events                    | Retries may cause the same event to be processed more than once  | Introduce event IDs/idempotency strategy before asynchronous retries are enabled. **Status: now live** — the worker exists and is consuming the queue; no idempotency strategy has been confirmed yet, so this should be checked before relying on the pipeline being duplicate-safe. |
-| Database bottleneck                 | Direct writes may become the ingestion bottleneck                | Measure throughput, then introduce queue/workers and appropriate indexing               |
-| Cache inconsistency                 | Cached analytics can become stale                                | Define TTL/invalidation policy and treat PostgreSQL as the source of truth              |
-| Credential leakage                  | Database/API secrets may enter Git                               | `.env` in `.gitignore`, secret scanning, deployment secret management                   |
-| API abuse                           | Unauthenticated endpoints can be flooded                         | Authentication and rate limiting before public exposure                                 |
-| Schema evolution                    | Event formats may change over time                               | Version event schemas and use database migration strategy                               |
-| Over-indexing                       | Too many indexes increase write cost                             | Add indexes based on measured query patterns                                            |
-| Large payloads                      | Oversized events can consume excessive resources                 | Enforce request/payload size limits                                                     |
-| Poor observability                  | Errors may be difficult to diagnose                              | Standardized logs, request IDs, metrics, and alerts                                     |
+| Database bottleneck                 | Direct writes may become the ingestion bottleneck                | Measure throughput, then introduce queue/workers and appropriate indexing                                                                                                                                                                                                             |
+| Cache inconsistency                 | Cached analytics can become stale                                | Define TTL/invalidation policy and treat PostgreSQL as the source of truth                                                                                                                                                                                                            |
+| Credential leakage                  | Database/API secrets may enter Git                               | `.env` in `.gitignore`, secret scanning, deployment secret management                                                                                                                                                                                                                 |
+| API abuse                           | Unauthenticated endpoints can be flooded                         | Authentication and rate limiting before public exposure                                                                                                                                                                                                                               |
+| Schema evolution                    | Event formats may change over time                               | Version event schemas and use database migration strategy                                                                                                                                                                                                                             |
+| Over-indexing                       | Too many indexes increase write cost                             | Add indexes based on measured query patterns                                                                                                                                                                                                                                          |
+| Large payloads                      | Oversized events can consume excessive resources                 | Enforce request/payload size limits                                                                                                                                                                                                                                                   |
+| Poor observability                  | Errors may be difficult to diagnose                              | Standardized logs, request IDs, metrics, and alerts                                                                                                                                                                                                                                   |
 
 ---
 
@@ -1572,13 +1567,13 @@ Before deployment, the project should have:
 - environment-specific configuration
 - managed secrets
 - HTTPS/TLS
-- authentication *(not yet — Milestone 5, Week 4)*
-- rate limiting *(not yet — Milestone 5, Week 4)*
+- authentication _(not yet — Milestone 5, Week 4)_
+- rate limiting _(not yet — Milestone 5, Week 4)_
 - database migrations
 - health checks
-- structured logging *(partial — `worker.py` has basic logging; API doesn't yet; full structured JSON format still pending, §9.1)*
+- structured logging _(partial — `worker.py` has basic logging; API doesn't yet; full structured JSON format still pending, §9.1)_
 - monitoring
-- automated tests *(partial — unit/integration/e2e suite exists and runs via `test-runner`; CI integration and coverage tracking still pending, §8.9)*
+- automated tests _(partial — unit/integration/e2e suite exists and runs via `test-runner`; CI integration and coverage tracking still pending, §8.9)_
 - backup strategy
 - rollback procedure
 
@@ -1666,56 +1661,56 @@ Initial TDD covering:
 
 ## 20. Glossary
 
-| Term              | Definition                                                                                              |
-| ----------------- | ------------------------------------------------------------------------------------------------------- |
-| API               | Application Programming Interface; rules and endpoints through which software components communicate    |
-| Endpoint          | A specific API route such as `POST /events`                                                             |
-| Backend           | Server-side software responsible for processing requests and data                                       |
-| Frontend          | Client-side software used by the user, such as the analytics dashboard                                  |
-| Database          | Structured persistent storage for application data                                                      |
-| Telemetry         | Data describing activity or behaviour generated by a system                                             |
-| Event             | A record describing something that happened in the game                                                 |
-| SDK               | Software Development Kit; tools/library that simplify integration with a platform                       |
-| Pydantic          | Python library used here to validate structured API data                                                |
-| PostgreSQL        | Relational database used for persistent QuestMetrix data                                                |
-| Queue             | A mechanism for temporarily holding work until a worker processes it                                    |
-| Message Queue     | Infrastructure for asynchronously delivering work/messages between services                             |
-| Worker            | Background process that consumes and processes queued work                                              |
-| Redis             | In-memory data store planned for low-latency cached data                                                |
-| Cache             | Temporary/faster storage containing data that can be reused without recomputation                       |
-| WebSocket         | Persistent communication channel allowing server/client real-time messages                              |
-| REST              | API style based around resources and HTTP methods                                                       |
-| CORS              | Browser security mechanism controlling cross-origin requests                                            |
-| Rate Limiting     | Restricting how many requests a client can make in a period                                             |
-| API Key           | Credential used to identify and authorize an API client                                                 |
-| Idempotency       | Property allowing a repeated operation to produce the same intended result without unwanted duplication |
-| Dead-Letter Queue | Queue containing messages that could not be successfully processed                                      |
-| CI/CD             | Automated processes for building, testing, and deploying software                                       |
-| Container         | Isolated package containing software and its runtime dependencies                                       |
-| Docker            | Platform for building and running containers                                                            |
-| Migration         | Versioned change to a database schema                                                                   |
-| Observability     | Ability to understand system behaviour through logs, metrics, and traces                                |
-| p95 latency       | Response time below which 95% of measured requests fall                                                 |
-| p99 latency       | Response time below which 99% of measured requests fall                                                 |
-| Session           | A logical period of player activity grouped according to a defined rule                                 |
-| Retention         | Measurement of whether users return after an initial period                                             |
-| Replay            | Ordered representation of a player's sequence of gameplay events                                        |
-| Redis Streams     | Redis's built-in log/queue data structure; used here as the message queue between the API and the worker |
+| Term                   | Definition                                                                                                                                                             |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| API                    | Application Programming Interface; rules and endpoints through which software components communicate                                                                   |
+| Endpoint               | A specific API route such as `POST /events`                                                                                                                            |
+| Backend                | Server-side software responsible for processing requests and data                                                                                                      |
+| Frontend               | Client-side software used by the user, such as the analytics dashboard                                                                                                 |
+| Database               | Structured persistent storage for application data                                                                                                                     |
+| Telemetry              | Data describing activity or behaviour generated by a system                                                                                                            |
+| Event                  | A record describing something that happened in the game                                                                                                                |
+| SDK                    | Software Development Kit; tools/library that simplify integration with a platform                                                                                      |
+| Pydantic               | Python library used here to validate structured API data                                                                                                               |
+| PostgreSQL             | Relational database used for persistent QuestMetrix data                                                                                                               |
+| Queue                  | A mechanism for temporarily holding work until a worker processes it                                                                                                   |
+| Message Queue          | Infrastructure for asynchronously delivering work/messages between services                                                                                            |
+| Worker                 | Background process that consumes and processes queued work                                                                                                             |
+| Redis                  | In-memory data store planned for low-latency cached data                                                                                                               |
+| Cache                  | Temporary/faster storage containing data that can be reused without recomputation                                                                                      |
+| WebSocket              | Persistent communication channel allowing server/client real-time messages                                                                                             |
+| REST                   | API style based around resources and HTTP methods                                                                                                                      |
+| CORS                   | Browser security mechanism controlling cross-origin requests                                                                                                           |
+| Rate Limiting          | Restricting how many requests a client can make in a period                                                                                                            |
+| API Key                | Credential used to identify and authorize an API client                                                                                                                |
+| Idempotency            | Property allowing a repeated operation to produce the same intended result without unwanted duplication                                                                |
+| Dead-Letter Queue      | Queue containing messages that could not be successfully processed                                                                                                     |
+| CI/CD                  | Automated processes for building, testing, and deploying software                                                                                                      |
+| Container              | Isolated package containing software and its runtime dependencies                                                                                                      |
+| Docker                 | Platform for building and running containers                                                                                                                           |
+| Migration              | Versioned change to a database schema                                                                                                                                  |
+| Observability          | Ability to understand system behaviour through logs, metrics, and traces                                                                                               |
+| p95 latency            | Response time below which 95% of measured requests fall                                                                                                                |
+| p99 latency            | Response time below which 99% of measured requests fall                                                                                                                |
+| Session                | A logical period of player activity grouped according to a defined rule                                                                                                |
+| Retention              | Measurement of whether users return after an initial period                                                                                                            |
+| Replay                 | Ordered representation of a player's sequence of gameplay events                                                                                                       |
+| Redis Streams          | Redis's built-in log/queue data structure; used here as the message queue between the API and the worker                                                               |
 | Docker Compose profile | A named group of services (e.g. `test`) that only start when explicitly requested, keeping optional services like `test-runner` out of the default `docker-compose up` |
-| WSL               | Windows Subsystem for Linux; the backend Docker Desktop uses to run Linux containers on Windows          |
+| WSL                    | Windows Subsystem for Linux; the backend Docker Desktop uses to run Linux containers on Windows                                                                        |
 
 ---
 
 ## 21. Current Roadmap
 
-| #   | Milestone             | Deliverable                                                  | Status   |
-| --- | --------------------- | ------------------------------------------------------------ | -------- |
-| 1   | Foundation            | FastAPI + PostgreSQL + `POST`/`GET /events`                  | Complete |
-| 2   | Game Integration      | Godot SDK and real game → API event flow                     | Complete |
-| 3   | Analytics             | Player/level/session statistics                              | Complete |
-| 4   | Dashboard             | React analytics dashboard                                    | Complete |
-| 5   | Scalability           | Redis, message queue, workers, rate limiting, authentication | WIP      |
-| 6   | Real-Time / Advanced  | WebSockets + session/replay visualization                    | Planned  |
+| #   | Milestone             | Deliverable                                                                                                                                                    | Status   |
+| --- | --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| 1   | Foundation            | FastAPI + PostgreSQL + `POST`/`GET /events`                                                                                                                    | Complete |
+| 2   | Game Integration      | Godot SDK and real game → API event flow                                                                                                                       | Complete |
+| 3   | Analytics             | Player/level/session statistics                                                                                                                                | Complete |
+| 4   | Dashboard             | React analytics dashboard                                                                                                                                      | Complete |
+| 5   | Scalability           | Redis, message queue, workers, rate limiting, authentication                                                                                                   | WIP      |
+| 6   | Real-Time / Advanced  | WebSockets + session/replay visualization                                                                                                                      | Planned  |
 | 7   | Engineering Hardening | CI integration for tests, full structured logging, CI/CD, load testing (Docker and an initial unit/integration/e2e suite were pulled forward into Milestone 5) | Planned  |
 
 A detailed task breakdown should be maintained separately in:

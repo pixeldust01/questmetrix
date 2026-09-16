@@ -6,8 +6,9 @@ from main import app
 client = TestClient(app)
 
 
+@patch("main.verify_api_key")
 @patch("main.publish_event")
-def test_create_event_queues_event(mock_publish):
+def test_create_event_queues_event(mock_publish, mock_verify_api_key):
     mock_publish.return_value = "1234567890-0"
     event = {
         "event": "enemy_killed",
@@ -25,11 +26,15 @@ def test_create_event_queues_event(mock_publish):
     }
     event["timestamp"] = datetime(2026, 8, 23, 1, 0, 0)
     mock_publish.assert_called_once_with(event)
+    mock_verify_api_key.assert_called_once_with(event["game_id"], None)
 
 
+@patch("main.verify_api_key")
 @patch("main.publish_event")
 @patch("events.get_db_connection")
-def test_create_event_does_not_write_to_database(mock_get_db, mock_publish):
+def test_create_event_does_not_write_to_database(
+    mock_get_db, mock_publish, mock_verify_api_key
+):
     mock_publish.return_value = "1234567890-0"
     event = {
         "event": "enemy_killed",
@@ -43,6 +48,7 @@ def test_create_event_does_not_write_to_database(mock_get_db, mock_publish):
 
     assert response.status_code == 200
     mock_get_db.assert_not_called()
+    mock_verify_api_key.assert_called_once_with(event["game_id"], None)
 
 
 def test_create_event_missing_required_fields():

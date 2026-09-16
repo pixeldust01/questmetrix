@@ -2,12 +2,16 @@
 
 A chronological log of the project's development milestones.
 
+### 17 September 2026
+
+- **Implemented API Key Authentication (M5W4):** Secured the `POST /events` endpoint by requiring a valid `X-API-Key` header. This included creating a `game_api_keys` table, an `auth.py` verification module, and testing all success (200) and failure (401) scenarios.
+
 ### 28 August 2026
 
 - **Completed step 1 of M5W4 (rate-limiting):** Added isolated test for rate limiting, and ignored it from `test-runner` profile. To test current rate limiting, run `python -m pytest tests/integration/test_rate_limit.py` from `/backend`.
 - Install slowapi, add it to requirements.txt, create Limiter, attach limiter to FastAPI, add 429 exception handler, protect POST /events, rebuild backend container and verified normal POST /events still works.
 - Enhanced `test-runner` test suite.
-- I have standardized the timestamps across all test files by removing the trailing 'Z'. This ensures consistency with your database schema.
+- Standardized the timestamps across all test files by removing the trailing 'Z'. This ensures consistency with the database schema.
 
 ### 23 August 2026
 

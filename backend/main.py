@@ -1,14 +1,14 @@
 from datetime import datetime
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Header
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
-from database import get_db_connection
 from events import create_event, get_all_events
 from event_queue import publish_event
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
+from auth import verify_api_key
 
 limiter = Limiter(key_func=get_remote_address)
 
@@ -45,7 +45,8 @@ def root():
 
 @app.post("/events")
 @limiter.limit("100/minute")
-def create_event_endpoint(request: Request, event: Event):
+def create_event_endpoint(request: Request, event: Event,  x_api_key: str | None = Header(default=None)):
+    verify_api_key(event.game_id, x_api_key)
     # event_id = create_event(event)
 
     event_data = event.model_dump()

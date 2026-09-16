@@ -142,11 +142,11 @@ For instructions on setting up the Godot test client, please refer to the SDK's 
 - Message queue
 - Asynchronous event processing
 - Background workers
+- API authentication
+- API rate limiting
 
 ### Planned
 
-- API authentication
-- API rate limiting
 - WebSockets
 - Session/replay analysis
 - CI/CD
@@ -191,8 +191,8 @@ For instructions on setting up the Godot test client, please refer to the SDK's 
 - [x] Add asynchronous event processing
 - [x] Add message queue
 - [x] Add background workers
-- [ ] Add API rate limiting
-- [ ] Add authentication and API keys
+- [x] Add API rate limiting
+- [x] Add authentication and API keys
 
 ### Phase 6 - Real-Time + Session Replay
 

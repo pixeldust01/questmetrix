@@ -188,17 +188,17 @@ Already done as of 11 Aug 2026. For the record, this is what "done" looked like 
 
 ### Week 4 — Deadline: Sun 15 Nov 2026
 
-- [ ] Add basic rate limiting on `POST /events`
-- [ ] Add API key authentication (a `game_id` ↔ API key mapping is enough for v1 — no need for full OAuth)
-- [ ] Commit: `feat: add Redis caching`, `feat: add asynchronous event processing`
-- [ ] Update README: Planned → Implemented for Redis, queue, workers, rate limiting, auth
+- [x] Add basic rate limiting on `POST /events`
+- [x] Add API key authentication (a `game_id` ↔ API key mapping is enough for v1 — no need for full OAuth)
+- [x] Commit: `feat: add Redis caching`, `feat: add asynchronous event processing`
+- [x] Update README: Planned → Implemented for Redis, queue, workers, rate limiting, auth
 
 ### Milestone 5 — Definition of Done
 
-- [ ] Events flow through a queue + worker, not a direct insert
-- [ ] At least one endpoint is cache-backed with correct invalidation
-- [ ] `POST /events` requires a valid API key
-- [ ] Basic rate limiting rejects excessive requests
+- [x] Events flow through a queue + worker, not a direct insert
+- [x] At least one endpoint is cache-backed with correct invalidation
+- [x] `POST /events` requires a valid API key
+- [x] Basic rate limiting rejects excessive requests
 
 ### Watch out for
 
