@@ -1,7 +1,9 @@
 import logging
+import asyncio
 from redis.exceptions import ResponseError
 from redis_client import redis_client
 from database import get_db_connection
+from websocket_manager import manager
 
 logging.basicConfig(
     level=logging.INFO,
@@ -66,18 +68,18 @@ def store_event(event_data):
         cursor.close()
         conn.close()
 
-def run_worker():
+async def run_worker():
     ensure_consumer_group()
 
     logging.info("QuestMetrix worker started.")
 
-    recover_pending_messages()
+    await recover_pending_messages()
 
     while True:
-        process_single_batch()
+        await process_single_batch()
 
 
-def process_single_batch():
+async def process_single_batch():
     messages = redis_client.xreadgroup(
         groupname=CONSUMER_GROUP,
         consumername=CONSUMER_NAME,
@@ -102,13 +104,15 @@ def process_single_batch():
 
                 logging.info(f"Processed event {message_id}")
 
+                await manager.broadcast(event_data)
+
             except Exception as error:
                 logging.error(
                     f"Failed to process event "
                     f"{message_id}: {error}"
                 )
 
-def recover_pending_messages():
+async def recover_pending_messages():
     try:
         result = redis_client.xautoclaim(
             STREAM_NAME,
@@ -136,6 +140,8 @@ def recover_pending_messages():
                     f"Recovered pending event {message_id}"
                 )
 
+                await manager.broadcast(event_data)
+
             except Exception as error:
                 logging.error(
                     f"Failed to recover event "
@@ -149,4 +155,4 @@ def recover_pending_messages():
 
 
 if __name__ == "__main__":
-    run_worker()
+    asyncio.run(run_worker())

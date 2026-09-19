@@ -4,7 +4,7 @@ A chronological log of the project's development milestones.
 
 ### 17 September 2026
 
-- **Implemented API Key Authentication (M5W4):** Secured the `POST /events` endpoint by requiring a valid `X-API-Key` header. This included creating a `game_api_keys` table, an `auth.py` verification module, and testing all success (200) and failure (401) scenarios.
+- **Implemented API Key Authentication (M5W4):** Secured the `POST /events` endpoint by requiring a valid `X-API-Key` header. This included creating a `game_api_keys` table, an `auth.py` verification module, and testing all success (200) and failure (401/403) scenarios.
 
 ### 28 August 2026
 

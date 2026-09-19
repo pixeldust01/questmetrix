@@ -19,3 +19,4 @@ httpx2==2.10.0
 redis==8.1.0
 requests==2.32.3
 slowapi==0.1.10
+websockets==17.1

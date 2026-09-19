@@ -1,5 +1,6 @@
 from datetime import datetime
-from fastapi import FastAPI, Request, Header
+import json
+from fastapi import FastAPI, Request, Header, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
@@ -9,6 +10,7 @@ from slowapi import Limiter
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from auth import verify_api_key
+from websocket_manager import manager
 
 limiter = Limiter(key_func=get_remote_address)
 
@@ -100,3 +102,17 @@ async def rate_limit_handler(request, exc):
         status_code=429,
         content={"detail": "Rate limit exceeded"},
     )
+
+@app.websocket("/ws/events")
+async def websocket_endpoint(websocket: WebSocket):
+    await manager.connect(websocket)
+    try:
+        while True:
+            message = await websocket.receive_text()
+            if message:
+                event_data = json.loads(message)
+                print(f"Received event shalalala: {event_data}")
+            else:
+                print("No event received shalalala")
+    except WebSocketDisconnect:
+        manager.disconnect(websocket)

@@ -1,3 +1,4 @@
+import asyncio
 import time
 import uuid
 from unittest.mock import patch
@@ -52,7 +53,7 @@ def test_worker_processes_event():
              patch("worker.CONSUMER_GROUP", test_group), \
              patch("worker.CONSUMER_NAME", test_consumer):
 
-            process_single_batch()
+            asyncio.run(process_single_batch())
 
         # 4. Assert the event was written to the database
         conn = get_db_connection()
@@ -123,7 +124,7 @@ def test_worker_processes_multiple_events():
              patch("worker.CONSUMER_GROUP", test_group), \
              patch("worker.CONSUMER_NAME", test_consumer):
 
-            process_single_batch()
+            asyncio.run(process_single_batch())
 
         # 4. Assert all events were written to the database
         conn = get_db_connection()
@@ -204,7 +205,7 @@ def test_pending_event_is_recovered():
              patch("worker.CONSUMER_GROUP", test_group), \
              patch("worker.CONSUMER_NAME", recovery_consumer):
 
-            recover_pending_messages()
+            asyncio.run(recover_pending_messages())
 
         # 4. Assert the event was written to the database.
         conn = get_db_connection()
@@ -288,7 +289,7 @@ def test_pending_event_recovery_fails_on_db_error():
              patch("worker.CONSUMER_NAME", "recovery-worker-fail"):
 
             # 3. Attempt recovery
-            recover_pending_messages()
+            asyncio.run(recover_pending_messages())
 
         # 4. Assert message is still pending
         pending = redis_client.xpending(
@@ -348,7 +349,7 @@ def test_worker_handles_malformed_event():
              patch("worker.CONSUMER_NAME", test_consumer):
 
             # This will raise an exception internally, which is caught
-            process_single_batch()
+            asyncio.run(process_single_batch())
 
         # 3. Assert that the message was NOT written to the database
         conn = get_db_connection()
