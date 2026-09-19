@@ -7,6 +7,16 @@ services: # 5 containers as of 23 august
       - "8000:8000"
     env_file:
       - ./backend/.env
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://localhost:8000/')"
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
     depends_on:
       - postgres
       - redis
@@ -47,16 +57,30 @@ services: # 5 containers as of 23 august
     env_file:
       - ./backend/.env
     depends_on:
-      - backend
-      - postgres
-      - redis
+      backend:
+        condition: service_healthy
+      postgres:
+        condition: service_started
+      redis:
+        condition: service_started
+    environment:
+      BASE_URL: http://backend:8000
+      WS_URL: ws://backend:8000
 
     # docker compose --profile test up --build test-runner
     profiles:
       - test
 
     # Run only integration and e2e folders, ignore integration/test_rate_limit.py
-    command: ["python", "-m", "pytest", "tests/integration", "tests/e2e", "--ignore=tests/integration/test_rate_limit.py"]
+    command:
+      [
+        "python",
+        "-m",
+        "pytest",
+        "tests/integration",
+        "tests/e2e",
+        "--ignore=tests/integration/test_rate_limit.py",
+      ]
 
 volumes:
   postgres_data:

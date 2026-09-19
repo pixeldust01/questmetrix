@@ -1,9 +1,9 @@
+import json
 import logging
 import asyncio
 from redis.exceptions import ResponseError
-from redis_client import redis_client
+from redis_client import redis_client, PUBSUB_CHANNEL
 from database import get_db_connection
-from websocket_manager import manager
 
 logging.basicConfig(
     level=logging.INFO,
@@ -68,6 +68,11 @@ def store_event(event_data):
         cursor.close()
         conn.close()
 
+def processed_event_payload(event_data):
+    payload = dict(event_data)
+    payload["level"] = int(payload["level"])
+    return payload
+
 async def run_worker():
     ensure_consumer_group()
 
@@ -104,7 +109,10 @@ async def process_single_batch():
 
                 logging.info(f"Processed event {message_id}")
 
-                await manager.broadcast(event_data)
+                redis_client.publish(
+                    PUBSUB_CHANNEL,
+                    json.dumps(processed_event_payload(event_data)),
+                )
 
             except Exception as error:
                 logging.error(
@@ -140,7 +148,10 @@ async def recover_pending_messages():
                     f"Recovered pending event {message_id}"
                 )
 
-                await manager.broadcast(event_data)
+                redis_client.publish(
+                    PUBSUB_CHANNEL,
+                    json.dumps(processed_event_payload(event_data)),
+                )
 
             except Exception as error:
                 logging.error(

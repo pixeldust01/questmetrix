@@ -1,5 +1,6 @@
 from datetime import datetime
-import json
+import asyncio
+from realtime import listen_for_processed_events
 from fastapi import FastAPI, Request, Header, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -23,6 +24,11 @@ from analytics import (
 ) 
 
 app = FastAPI()
+
+@app.on_event("startup")
+async def startup_event():
+    asyncio.create_task(listen_for_processed_events())
+
 app.state.limiter = limiter
 
 app.add_middleware(
@@ -108,11 +114,6 @@ async def websocket_endpoint(websocket: WebSocket):
     await manager.connect(websocket)
     try:
         while True:
-            message = await websocket.receive_text()
-            if message:
-                event_data = json.loads(message)
-                print(f"Received event shalalala: {event_data}")
-            else:
-                print("No event received shalalala")
+            await websocket.receive_text()
     except WebSocketDisconnect:
         manager.disconnect(websocket)

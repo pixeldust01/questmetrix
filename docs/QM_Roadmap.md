@@ -214,8 +214,8 @@ Already done as of 11 Aug 2026. For the record, this is what "done" looked like 
 
 ### Week 1 — Deadline: Sun 22 Nov 2026
 
-- [ ] Learn WebSocket basics in FastAPI
-- [ ] Build a WebSocket endpoint that broadcasts new events as they're processed by the worker
+- [x] Learn WebSocket basics in FastAPI
+- [x] Build a WebSocket endpoint that broadcasts new events as they're processed by the worker
 
 ### Week 2 — Deadline: Sun 29 Nov 2026
 

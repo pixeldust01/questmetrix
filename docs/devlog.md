@@ -2,6 +2,15 @@
 
 A chronological log of the project's development milestones.
 
+### 19 September 2026
+
+- **Implemented Real-Time Event Broadcasting via WebSockets (M6):** Established the foundation for live front-end updates by creating an end-to-end WebSocket pipeline.
+- **Architecture:**
+    - Added a WebSocket endpoint and connection manager to the FastAPI application.
+    - Utilized Redis Pub/Sub to decouple the worker from the API. The worker now publishes successfully processed events to a Redis channel.
+    - The FastAPI server subscribes to this channel and broadcasts incoming messages to all connected WebSocket clients.
+- **Verification:** A new integration test was added to verify that events sent through the `POST /events` endpoint are correctly processed and broadcast to a connected WebSocket client.
+
 ### 17 September 2026
 
 - **Implemented API Key Authentication (M5W4):** Secured the `POST /events` endpoint by requiring a valid `X-API-Key` header. This included creating a `game_api_keys` table, an `auth.py` verification module, and testing all success (200) and failure (401/403) scenarios.

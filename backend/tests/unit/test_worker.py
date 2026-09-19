@@ -1,5 +1,6 @@
 import asyncio
-from unittest.mock import AsyncMock, MagicMock, patch
+import json
+from unittest.mock import MagicMock, patch
 
 from worker import process_single_batch
 
@@ -16,11 +17,8 @@ def test_worker_broadcasts_after_successful_processing():
     redis.xreadgroup.return_value = [
         ("questmetrix:events", [("1-0", event_data)])
     ]
-    manager = MagicMock()
-    manager.broadcast = AsyncMock()
 
     with patch("worker.redis_client", redis), \
-         patch("worker.manager", manager), \
          patch("worker.store_event") as store_event:
         asyncio.run(process_single_batch())
 
@@ -30,7 +28,13 @@ def test_worker_broadcasts_after_successful_processing():
         "questmetrix-workers",
         "1-0",
     )
-    manager.broadcast.assert_awaited_once_with(event_data)
+    published_event = json.loads(
+        redis.publish.call_args.args[1]
+    )
+    assert published_event == {
+        **event_data,
+        "level": 1,
+    }
 
 
 def test_worker_does_not_broadcast_when_processing_fails():
@@ -45,13 +49,10 @@ def test_worker_does_not_broadcast_when_processing_fails():
     redis.xreadgroup.return_value = [
         ("questmetrix:events", [("1-0", event_data)])
     ]
-    manager = MagicMock()
-    manager.broadcast = AsyncMock()
 
     with patch("worker.redis_client", redis), \
-         patch("worker.manager", manager), \
          patch("worker.store_event", side_effect=Exception("DB error")):
         asyncio.run(process_single_batch())
 
     redis.xack.assert_not_called()
-    manager.broadcast.assert_not_awaited()
+    redis.publish.assert_not_called()
